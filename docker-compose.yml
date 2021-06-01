@@ -1,4 +1,3 @@
-version: "3.9"
 services:
     rabbitmq:
         image: "rabbitmq:3-management-alpine"
@@ -27,20 +26,10 @@ services:
             timeout: 10s
             retries: 5
 
-    psql:
-        image: "postgres:13-alpine"
-        stdin_open: true
-        tty: true
-        command: ["psql", "-h", "postgres", "-U", "postgres"]
-        depends_on:
-            postgres:
-                condition: service_healthy
-
     server:
-        # container_name: server
         build:
             context: .
-            dockerfile: Dockerfile.server
+            dockerfile: server.Dockerfile
         ports:
             - 8080:8080
         env_file:
@@ -51,9 +40,10 @@ services:
                 condition: service_healthy
 
     backend:
+        container_name: microservices_backend
         build:
             context: .
-            dockerfile: Dockerfile.backend
+            dockerfile: backend.Dockerfile
         env_file:
             - .env
         stdin_open: true
@@ -65,7 +55,7 @@ services:
     database:
         build:
             context: .
-            dockerfile: Dockerfile.database
+            dockerfile: database.Dockerfile
         env_file:
             - .env
         depends_on:
@@ -73,3 +63,7 @@ services:
                 condition: service_healthy
             postgres:
                 condition: service_healthy
+
+networks:
+    default:
+        name: microservices_network
