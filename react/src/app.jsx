@@ -68,7 +68,7 @@ function App(){
     React.useEffect(() => {
         clearTimeout(timeout.current);
 
-        timeout.current = setTimeout(() => {setAlerts([])}, 15000);
+        timeout.current = setTimeout(() => {setAlerts([])}, 20000);
 
         return () => {
             clearTimeout(timeout.current);
