@@ -17,7 +17,7 @@ type Config struct {
 func New() *Config {
 	return &Config{
 		ServerAddr:  getEnv("SERVER_ADDR", "localhost:8080"),
-		PostgresURL: getEnv("POSTGRES_URL", "postgres://postgres:postgres@localhost:5432/microservices"),
+		PostgresURL: getEnv("POSTGRES_URL", "postgres://postgres:demopsw@localhost:5432/microservices"),
 		RabbitURL:   getEnv("RABBIT_URL", "amqp://guest:guest@localhost:5672"),
 		Exchange:    getEnv("EXCHANGE", "main_exchange"),
 		QueueBack:   getEnv("QUEUE_BACK", "backend_queue"),
