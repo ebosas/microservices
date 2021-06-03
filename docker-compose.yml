@@ -11,7 +11,6 @@ services:
             interval: 10s
             timeout: 10s
             retries: 5
-
     postgres:
         image: "postgres:13-alpine"
         environment:
@@ -25,7 +24,6 @@ services:
             interval: 10s
             timeout: 10s
             retries: 5
-
     server:
         build:
             context: .
@@ -38,7 +36,6 @@ services:
         depends_on:
             rabbitmq:
                 condition: service_healthy
-
     backend:
         container_name: microservices_backend
         build:
@@ -51,7 +48,6 @@ services:
         depends_on:
             rabbitmq:
                 condition: service_healthy
-
     database:
         build:
             context: .
@@ -63,7 +59,6 @@ services:
                 condition: service_healthy
             postgres:
                 condition: service_healthy
-
 networks:
     default:
         name: microservices_network

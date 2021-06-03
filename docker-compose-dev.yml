@@ -1,0 +1,17 @@
+services:
+    rabbitmq:
+        image: "rabbitmq:3-management-alpine"
+        ports:
+            - 5672:5672
+            - 15672:15672
+    postgres:
+        image: "postgres:13-alpine"
+        environment:
+            - POSTGRES_PASSWORD
+        ports:
+            - 5432:5432
+        volumes:
+            - ./database/structure.sql:/docker-entrypoint-initdb.d/structure.sql
+networks:
+    default:
+        name: microservices_network
