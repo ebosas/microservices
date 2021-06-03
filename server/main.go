@@ -26,6 +26,7 @@ var (
 
 func main() {
 	log.SetFlags(0)
+	log.Print("Running server")
 
 	conn, err := amqp.Dial(conf.RabbitURL)
 	if err != nil {
@@ -75,21 +76,15 @@ func main() {
 		log.Fatalf("Failed to bind a backend queue: %s", err)
 	}
 
-	// files := http.FileServer(http.Dir("./static"))
-	// http.Handle("/static/", http.StripPrefix("/static/", files))
-	// http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.FS(static))))
 	http.Handle("/static/", http.FileServer(http.FS(static)))
-
 	http.HandleFunc("/", handleHome)
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		handleWs(w, r, conn)
 	})
-
 	log.Fatal(http.ListenAndServe(conf.ServerAddr, nil))
 }
 
 func handleHome(w http.ResponseWriter, r *http.Request) {
-	// t, _ := template.ParseFiles("template.html")
 	t, _ := template.ParseFS(files, "template.html")
 	t.Execute(w, nil)
 }
@@ -110,8 +105,8 @@ func handleWs(w http.ResponseWriter, r *http.Request, c *amqp.Connection) {
 	<-done
 }
 
-// wsWriter reads messages from a Rabbit exchange
-// and writes to a websocket
+// wsWriter reads messages from RabbitMQ
+// and writes to websocket
 func wsWriter(ws *websocket.Conn, c *amqp.Connection, done chan bool) {
 	defer func() {
 		done <- true
@@ -152,7 +147,7 @@ func wsWriter(ws *websocket.Conn, c *amqp.Connection, done chan bool) {
 	msgs, err := ch.Consume(
 		q.Name, // queue name
 		"",     // consumer
-		false,  // auto-ack
+		true,   // auto-ack
 		false,  // exclusive
 		false,  // no-local
 		false,  // no-wait
@@ -170,14 +165,12 @@ func wsWriter(ws *websocket.Conn, c *amqp.Connection, done chan bool) {
 			log.Printf("Failed to write to WebSocket: %s", err)
 			break
 		}
-
-		msg.Ack(false)
 	}
 
 }
 
-// wsReader reads messages from a websocket and writes
-// to a Rabbit exchange
+// wsReader reads messages from websocket
+// and publishes to RabbitMQ
 func wsReader(ws *websocket.Conn, c *amqp.Connection, done chan bool) {
 	defer func() {
 		done <- true

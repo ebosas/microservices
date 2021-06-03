@@ -23,6 +23,7 @@ var conf = config.New()
 
 func main() {
 	log.SetFlags(0)
+	log.Print("Running backend")
 
 	conn, err := amqp.Dial(conf.RabbitURL)
 	if err != nil {
@@ -85,6 +86,8 @@ func main() {
 		log.Fatalf("Failed to register a consumer: %s", err)
 	}
 
+	// Reads messages from the back end queue
+	// and prints them to the terminal
 	go func() {
 		for msg := range msgs {
 			var message Message
@@ -101,9 +104,9 @@ func main() {
 	publishInput(conn)
 }
 
-// publishInput reads user input from stdin,
-// marshals as json messages, and publishes them
-// to a RabbitMQ exchange
+// publishInput reads user input, marshals to json,
+// and publishes to RabbitMQ with the front end
+// and database keys
 func publishInput(c *amqp.Connection) {
 	ch, err := c.Channel()
 	if err != nil {

@@ -20,6 +20,9 @@ type Message struct {
 var conf = config.New()
 
 func main() {
+	log.SetFlags(0)
+	log.Print("Running database")
+
 	// Postgres connection
 	connP, err := pgx.Connect(context.Background(), conf.PostgresURL)
 	if err != nil {
@@ -97,7 +100,7 @@ func main() {
 			break
 		}
 
-		// Insert a message from Rabbit to Postgres
+		// Insert a message from RabbitMQ to Postgres
 		_, err = connP.Exec(context.Background(), "insert into messages (message, created) values ($1, to_timestamp($2))", message.Text, message.Time/1000)
 		if err != nil {
 			log.Printf("Failed to insert into a database: %s", err)
