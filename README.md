@@ -23,7 +23,7 @@ docker-compose up
 
 ### Back end
 
-To access the back end service, attach to its docker container from a separate terminal window. Messages from the front end will show up here. Also, standart input from this service is sent to the front end for two way communication.
+To access the back end service, attach to its docker container from a separate terminal window. Messages from the front end will show up here. Also, standart input will be sent to the front end for two way communication.
 
 ```bash
 docker attach microservices_backend
@@ -34,16 +34,15 @@ docker attach microservices_backend
 To inspect the database, launch a new container that will connect to our Postgres database. Then enter the password `demopsw` (see the `.env` file).
 
 ```bash
-docker run -it --rm --network microservices_network postgres:13-alpine psql -h postgres -U postgres
+docker run -it --rm --network microservices_network postgres:13-alpine psql -h postgres -U postgres -d microservices
 ```
 
 Select everything from the messages table:
 
 ```sql
-\c microservices
 select * from messages;
 ```
 
-### RabbitMQ management
+### RabbitMQ
 
 Access the RabbitMQ management interface by visiting `localhost:15672` with `guest` as both username and password.
