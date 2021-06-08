@@ -11,7 +11,7 @@ services:
         ports:
             - 5432:5432
         volumes:
-            - ./database/structure.sql:/docker-entrypoint-initdb.d/structure.sql
+            - ./init/database.sql:/docker-entrypoint-initdb.d/database.sql
 networks:
     default:
         name: microservices_network

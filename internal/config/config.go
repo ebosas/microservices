@@ -6,14 +6,16 @@ type Config struct {
 	ServerAddr  string
 	PostgresURL string
 	RabbitURL   string
-	Exchange    string
-	QueueBack   string
+	Exchange    string // Rabbit exchange name
+	QueueBack   string // queue name
 	QueueDB     string
-	KeyFront    string
+	KeyFront    string // routing key name
 	KeyBack     string
 	KeyDB       string
 }
 
+// New returns configuration variables from the environment.
+// These are passed by Docker from the .env file.
 func New() *Config {
 	return &Config{
 		ServerAddr:  getEnv("SERVER_ADDR", "localhost:8080"),
@@ -32,6 +34,5 @@ func getEnv(key string, defaultVal string) string {
 	if value, exists := os.LookupEnv(key); exists {
 		return value
 	}
-
 	return defaultVal
 }

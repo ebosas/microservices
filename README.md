@@ -7,11 +7,11 @@ A basic example of microservice architecture which demonstrates communication be
 * Uses WebSocket to talk to the front end
 * Stores data in PostgreSQL
 * Uses React for front end development
-* Builds and runs the application with Docker
+* Builds and runs with Docker
 
-## Running the code
+## Usage
 
-To run the example, clone the Github repository and start the services with Docker Compose. Once Docker finishes downloading and building images, the front end is accessible by visiting `localhost:8080` in a browser.
+To run the example, clone the Github repository and start the services using Docker Compose. Once Docker finishes downloading and building images, the front end is accessible by visiting `localhost:8080`.
 
 ```bash
 git clone https://github.com/ebosas/microservices
@@ -34,7 +34,8 @@ docker attach microservices_backend
 To inspect the database, launch a new container that will connect to our Postgres database. Then enter the password `demopsw` (see the `.env` file).
 
 ```bash
-docker run -it --rm --network microservices_network postgres:13-alpine psql -h postgres -U postgres -d microservices
+docker run -it --rm --network microservices_network \
+    postgres:13-alpine psql -h postgres -U postgres -d microservices
 ```
 
 Select everything from the messages table:

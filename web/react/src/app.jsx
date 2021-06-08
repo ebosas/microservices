@@ -42,8 +42,7 @@ function App() {
         }
     }, []);
 
-    // Sets a received message handler,
-    // only once
+    // Sets a received message handler, only once.
     React.useEffect(() => {
         if (!ws.current) return;
 

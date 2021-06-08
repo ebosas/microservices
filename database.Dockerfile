@@ -1,9 +1,9 @@
 FROM golang:1.16-alpine AS database
 WORKDIR /go/src/app
-COPY database/go.mod database/go.sum ./
+COPY go.* .
+COPY internal ./internal
 RUN go mod download
-COPY database .
-# Info about flags: https://golang.org/cmd/link/
+COPY cmd/database .
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags '-s' -o database .
 
 FROM scratch

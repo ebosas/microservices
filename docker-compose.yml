@@ -5,9 +5,9 @@ services:
             - 5672:5672
             - 15672:15672
         healthcheck:
-            # Info: https://www.rabbitmq.com/monitoring.html#health-checks
-            # test: ["CMD", "rabbitmqctl", "status"]
+            # Rabbit health check info https://www.rabbitmq.com/monitoring.html#health-checks
             test: ["CMD", "rabbitmq-diagnostics", "-q", "status"]
+            # test: ["CMD", "rabbitmqctl", "status"] # alternative
             interval: 10s
             timeout: 10s
             retries: 5
@@ -18,7 +18,7 @@ services:
         ports:
             - 5432:5432
         volumes:
-            - ./database/structure.sql:/docker-entrypoint-initdb.d/structure.sql
+            - ./init/database.sql:/docker-entrypoint-initdb.d/database.sql
         healthcheck:
             test: ["CMD-SHELL", "pg_isready -U postgres"]
             interval: 10s

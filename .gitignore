@@ -1,3 +1,4 @@
 node_modules
-build
-server/static
+web/**/build
+cmd/**/build
+#.env
