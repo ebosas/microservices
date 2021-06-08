@@ -13,6 +13,7 @@ import (
 // The queue is created (or connected to, if exists) and bound to an exchange.
 // Used for durable queues in the main go routine.
 func (conn *Conn) StartConsumer(exch, qName, rKey string, handler func(amqp.Delivery) bool) error {
+	// Declare a durable queue
 	_, err := conn.Channel.QueueDeclare(qName, true, false, false, false, nil)
 	if err != nil {
 		return fmt.Errorf("queue declare: %v", err)

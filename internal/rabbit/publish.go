@@ -6,8 +6,8 @@ import (
 	"github.com/streadway/amqp"
 )
 
-// Publish publishes a message to a Rabbit exchange using a channel
-// opened upon connection to Rabbit. For use in the main go routine.
+// Publish publishes a message to a Rabbit exchange using the main channel.
+// For use in the main go routine.
 func (conn Conn) Publish(exch, rKey string, message []byte) error {
 	return PublishInChannel(conn.Channel, exch, rKey, message)
 }
