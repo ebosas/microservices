@@ -52,7 +52,7 @@ func receiveMessages(d amqp.Delivery) bool {
 }
 
 // publishInput reads user input, marshals to json, and publishes to
-// a Rabbit exchange with the front-end and database routing key.
+// a Rabbit exchange with the front-end and database routing keys.
 func publishInput(conn *rabbit.Conn) {
 	reader := bufio.NewReader(os.Stdin)
 

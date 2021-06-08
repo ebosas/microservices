@@ -124,7 +124,7 @@ func handleWriteWebsocket(ws *websocket.Conn) func(d amqp.Delivery) error {
 }
 
 // handlePublishRabbit publishes a Websocket message to a Rabbit
-// exchange with the the back-end and database routing key.
+// exchange with the the back-end and database routing keys.
 // A Websocket reader only passes a message. So, a Rabbit channel is
 // additionally passed using a closure.
 func handlePublishRabbit(ch *amqp.Channel) func(msg []byte) error {
