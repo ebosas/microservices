@@ -28,7 +28,7 @@ var (
 )
 
 func main() {
-	fmt.Println("Running server")
+	fmt.Println("[Server]")
 
 	// Establish a Rabbit connection.
 	conn, err := rabbit.GetConn(conf.RabbitURL)
@@ -64,7 +64,7 @@ func handleWebsocketConn(conn *rabbit.Conn) func(w http.ResponseWriter, r *http.
 	}
 }
 
-// handleWebsocket starts two message consumers/readers, one consuming
+// handleWebsocket starts two message readers (consumers), one consuming
 // a Rabbit queue and another reading from a Websocket connection.
 // Each consumer receives a message handler to relay messages –
 // from Rabbit to Websocket and vice versa.
@@ -84,10 +84,9 @@ func handleWebsocket(w http.ResponseWriter, r *http.Request, conn *rabbit.Conn) 
 	}
 	defer ch.Close()
 
-	// done closes a websocket connection, if there's an error in
-	// either a Rabbit consumer or Websocket reader.
+	// done and cancel() makes sure all spawned go routines are
+	// terminated if any one of them is finished.
 	done := make(chan bool)
-	// cancel terminates all spawned go routinges if one of them is done.
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -98,7 +97,7 @@ func handleWebsocket(w http.ResponseWriter, r *http.Request, conn *rabbit.Conn) 
 		return
 	}
 
-	// Start a websocket consumer/reader
+	// Start a websocket reader (consumer)
 	err = iwebsocket.StartReader(ctx, done, ws, handlePublishRabbit(ch))
 	if err != nil {
 		log.Printf("start websocket reader: %s", err)
@@ -132,7 +131,7 @@ func handlePublishRabbit(ch *amqp.Channel) func(msg []byte) error {
 		// TODO: check msg
 		err := rabbit.PublishInChannel(ch, conf.Exchange, conf.KeyBack+"."+conf.KeyDB, msg)
 		if err != nil {
-			// TODO: log error, not common event
+			// TODO: log error
 			return fmt.Errorf("publish rabbit: %v", err)
 		}
 		return nil
