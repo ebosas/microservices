@@ -34,8 +34,10 @@ docker attach microservices_backend
 To inspect the database, launch a new container that will connect to our Postgres database. Then enter the password `demopsw` (see the `.env` file).
 
 ```bash
-docker run -it --rm --network microservices_network \
-    postgres:13-alpine psql -h postgres -U postgres -d microservices
+docker run -it --rm \
+    --network microservices_network \
+    postgres:13-alpine \
+    psql -h postgres -U postgres -d microservices
 ```
 
 Select everything from the messages table:
@@ -47,3 +49,25 @@ select * from messages;
 ### RabbitMQ
 
 Access the RabbitMQ management interface by visiting `localhost:15672` with `guest` as both username and password.
+
+## Development environment
+
+For development, run the RabbitMQ and Postgres containers with Docker Compose.
+
+```bash
+docker-compose -f docker-compose-dev.yml up
+```
+
+Generate static web assets for the server service by going to `web/react` and `web/bootstrap` and running:
+
+```bash
+npm run build-server
+```
+
+### React
+
+For React development, run `npm run serve` in `web/react` and change the script tag in the server's template to the following:
+
+```html
+<script src="http://127.0.0.1:8000/index.js"></script>
+```
