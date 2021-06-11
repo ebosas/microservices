@@ -8,7 +8,7 @@
     "css-purge": "purgecss --keyframes --css build/style.css --content ref/template.html ref/index.js --output css/",
     "css": "npm run css-compile && npm run css-prefix && npm run css-purge",
     "css-dev": "sass --load-path node_modules -q scss/style.scss:build/style.css",
-    "css-server": "sass --load-path node_modules --no-source-map -q scss/style.scss:../server/static/style.css",
+    "build-server": "sass --load-path node_modules --no-source-map -q scss/style.scss:../../cmd/server/static/build/style.css",
     "serve": "http-server ./"
   },
   "keywords": [],

@@ -4,7 +4,7 @@
   "description": "",
   "scripts": {
     "build": "node esbuild.js",
-    "build-server": "esbuild src/index.jsx --bundle --outdir=../server/static",
+    "build-server": "esbuild src/index.jsx --bundle --outdir=../../cmd/server/static/build",
     "serve": "esbuild src/index.jsx --outfile=index.js --bundle --sourcemap --serve=8000"
   },
   "keywords": [],
