@@ -18,7 +18,7 @@ import (
 var conf = config.New()
 
 func main() {
-	fmt.Println("Running backend service")
+	fmt.Println("[Backend service]")
 
 	// Establish a Rabbit connection.
 	conn, err := rabbit.GetConn(conf.RabbitURL)
@@ -53,7 +53,7 @@ func printMessages(d amqp.Delivery) bool {
 
 // publishInput reads user input, marshals to json, and publishes to
 // a Rabbit exchange with the front-end and database routing keys.
-func publishInput(conn *rabbit.Conn) {
+func publishInput(c *rabbit.Conn) {
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		input, _ := reader.ReadString('\n')
@@ -68,7 +68,7 @@ func publishInput(conn *rabbit.Conn) {
 			log.Fatalf("marshal message: %s", err)
 		}
 
-		err = conn.Publish(conf.Exchange, conf.KeyFront+"."+conf.KeyDB, message)
+		err = c.Publish(conf.Exchange, conf.KeyFront+"."+conf.KeyDB, message)
 		if err != nil {
 			log.Fatalf("publish message: %s", err)
 		}

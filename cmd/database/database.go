@@ -16,7 +16,7 @@ import (
 var conf = config.New()
 
 func main() {
-	fmt.Println("Running database service")
+	fmt.Println("[Database service]")
 
 	// Postgres connection
 	connP, err := pgx.Connect(context.Background(), conf.PostgresURL)
@@ -46,14 +46,14 @@ func main() {
 }
 
 // insertToDB inserts a Rabbit message into a Postgres database.
-func insertToDB(d amqp.Delivery, connP *pgx.Conn) bool {
+func insertToDB(d amqp.Delivery, c *pgx.Conn) bool {
 	var message models.Message
 	err := json.Unmarshal(d.Body, &message)
 	if err != nil {
 		log.Fatalf("unmarshal message: %s", err)
 	}
 
-	_, err = connP.Exec(context.Background(), "insert into messages (message, created) values ($1, to_timestamp($2))", message.Text, message.Time/1000)
+	_, err = c.Exec(context.Background(), "insert into messages (message, created) values ($1, to_timestamp($2))", message.Text, message.Time/1000)
 	if err != nil {
 		log.Fatalf("insert into database: %s", err)
 	}
