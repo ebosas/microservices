@@ -9,6 +9,8 @@ A basic example of microservice architecture which demonstrates communication be
 * Uses React for front end development
 * Builds and runs with Docker
 
+![](demo.gif)
+
 ## Usage
 
 To run the example, clone the Github repository and start the services using Docker Compose. Once Docker finishes downloading and building images, the front end is accessible by visiting `localhost:8080`.
