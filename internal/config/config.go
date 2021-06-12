@@ -2,6 +2,7 @@ package config
 
 import "os"
 
+// Config stores configuration
 type Config struct {
 	ServerAddr  string
 	PostgresURL string
