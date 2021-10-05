@@ -129,7 +129,8 @@ func handleWriteWebsocket(ws *websocket.Conn) func(d amqp.Delivery) error {
 func handlePublishRabbit(ch *amqp.Channel) func(msg []byte) error {
 	return func(msg []byte) error {
 		// TODO: check msg
-		err := rabbit.PublishInChannel(ch, conf.Exchange, conf.KeyBack+"."+conf.KeyDB, msg)
+		key := conf.KeyBack + "." + conf.KeyDB + "." + conf.KeyCache
+		err := rabbit.PublishInChannel(ch, conf.Exchange, key, msg)
 		if err != nil {
 			// TODO: log error
 			return fmt.Errorf("publish rabbit: %v", err)

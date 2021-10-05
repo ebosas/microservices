@@ -19,27 +19,27 @@ func main() {
 	fmt.Println("[Database service]")
 
 	// Postgres connection
-	connP, err := pgx.Connect(context.Background(), conf.PostgresURL)
+	connPG, err := pgx.Connect(context.Background(), conf.PostgresURL)
 	if err != nil {
 		log.Fatalf("postgres connection: %s", err)
 	}
-	defer connP.Close(context.Background())
+	defer connPG.Close(context.Background())
 
-	// Rabbit connection
-	connR, err := rabbit.GetConn(conf.RabbitURL)
+	// RabbitMQ connection
+	connMQ, err := rabbit.GetConn(conf.RabbitURL)
 	if err != nil {
 		log.Fatalf("rabbit connection: %s", err)
 	}
-	defer connR.Close()
+	defer connMQ.Close()
 
-	err = connR.DeclareTopicExchange(conf.Exchange)
+	err = connMQ.DeclareTopicExchange(conf.Exchange)
 	if err != nil {
 		log.Fatalf("declare exchange: %s", err)
 	}
 
 	// Start a Rabbit consumer with a message processing handler.
-	connR.StartConsumer(conf.Exchange, conf.QueueDB, conf.KeyDB, func(d amqp.Delivery) bool {
-		return insertToDB(d, connP)
+	connMQ.StartConsumer(conf.Exchange, conf.QueueDB, conf.KeyDB, func(d amqp.Delivery) bool {
+		return insertToDB(d, connPG)
 	})
 
 	select {}
@@ -57,6 +57,10 @@ func insertToDB(d amqp.Delivery, c *pgx.Conn) bool {
 	if err != nil {
 		log.Fatalf("insert into database: %s", err)
 	}
+
+	// Alternatively, send Cache messages from here
+	// instead of server and backend services
+	// err = <Rabbit conn>.Publish(conf.Exchange, conf.KeyCache, d.Body)
 
 	return true
 }

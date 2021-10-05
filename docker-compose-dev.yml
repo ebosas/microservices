@@ -12,6 +12,10 @@ services:
             - 5432:5432
         volumes:
             - ./init/database.sql:/docker-entrypoint-initdb.d/database.sql
+    redis:
+        image: "redis:6-alpine"
+        ports:
+            - 6379:6379
 networks:
     default:
         name: microservices_network

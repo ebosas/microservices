@@ -52,6 +52,17 @@ select * from messages;
 
 Access the RabbitMQ management interface by visiting `localhost:15672` with `guest` as both username and password.
 
+### Redis
+
+```bash
+docker run -it --rm --network microservices_network redis:6-alpine redis-cli -h redis
+```
+
+```bash
+lrange messages 0 -1
+get count
+```
+
 ## Development environment
 
 For development, run the RabbitMQ and Postgres containers with Docker Compose.
