@@ -24,7 +24,6 @@ func main() {
 		Password: "", // no password set
 		DB:       0,  // use default DB
 	})
-	// defer connR.Close()
 
 	// RabbitMQ connection
 	connMQ, err := rabbit.GetConn(conf.RabbitURL)
