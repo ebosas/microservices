@@ -71,13 +71,14 @@ function Home() {
                 <div className="row">
                     <div className="col col-md-8 col-lg-6 mx-auto">
                         <Form sendMessage={sendMessage} />
-                    </div>    
+                    </div>
                 </div>
             </div>
             <div id="notifications" className="position-absolute top-0 start-0 w-100">
                 <div className="row">
                     <div className="col col-md-8 col-lg-6 mx-auto">
                         {alerts.map((alert) => (
+                            // TODO: duplicate keys possible
                             <Alert key={alert.time} alert={alert} />
                         ))}
                     </div>

@@ -1,7 +1,27 @@
 import React from "react";
 
 function Messages() {
-    return (
+    const [error, setError] = React.useState(null);
+    const [isLoaded, setIsLoaded] = React.useState(false);
+    const [items, setItems] = React.useState([]);
+
+    React.useEffect(() => {
+        fetch("/api/cache")
+          .then(res => res.json())
+          .then(
+            (result) => {
+              setIsLoaded(true);
+              setItems(result);
+              console.log(result);
+            },
+            (error) => {
+              setIsLoaded(true);
+              setError(error);
+            }
+          )
+      }, [])
+
+      return (
         <div className="container">
             <h3 className="my-4 ps-2">Recent messages (3/67)</h3>
             <table className="table">

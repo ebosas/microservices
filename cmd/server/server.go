@@ -9,9 +9,11 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/ebosas/microservices/internal/cache"
 	"github.com/ebosas/microservices/internal/config"
 	"github.com/ebosas/microservices/internal/rabbit"
 	iwebsocket "github.com/ebosas/microservices/internal/websocket"
+	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/websocket"
 	"github.com/streadway/amqp"
 )
@@ -31,30 +33,55 @@ func main() {
 	fmt.Println("[Server]")
 
 	// Establish a Rabbit connection.
-	conn, err := rabbit.GetConn(conf.RabbitURL)
+	connMQ, err := rabbit.GetConn(conf.RabbitURL)
 	if err != nil {
 		log.Fatalf("rabbit connection: %s", err)
 	}
-	defer conn.Close()
+	defer connMQ.Close()
 
-	err = conn.DeclareTopicExchange(conf.Exchange)
+	err = connMQ.DeclareTopicExchange(conf.Exchange)
 	if err != nil {
 		log.Fatalf("declare exchange: %s", err)
 	}
 
+	// Redis connection
+	connR := redis.NewClient(&redis.Options{
+		Addr:     conf.RedisURL,
+		Password: "", // no password set
+		DB:       0,  // use default DB
+	})
+
 	http.Handle("/static/", http.FileServer(http.FS(filesStatic)))
 	http.HandleFunc("/", handleHome)
-	http.HandleFunc("/ws", handleWebsocketConn(conn))
+	http.HandleFunc("/messages", handleMessages(connR))
+	http.HandleFunc("/ws", handleWebsocketConn(connMQ))
+	http.HandleFunc("/api/cache", handleAPICache(connR)) // defined in api.go
 	log.Fatal(http.ListenAndServe(conf.ServerAddr, nil))
 }
 
+// handleHome handles the home page.
 func handleHome(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
 		handleNotFound(w)
 		return
 	}
-	t, _ := template.ParseFS(filesTempl, "template/template.html")
-	t.Execute(w, nil)
+	t := template.Must(template.ParseFS(filesTempl, "template/template.html", "template/navbar.html", "template/home.html"))
+	t.ExecuteTemplate(w, "layout", nil)
+}
+
+// handleMessages handles the messages page.
+func handleMessages(cr *redis.Client) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		data, err := cache.GetCache(cr)
+		if err != nil {
+			log.Printf("get cache: %s", err)
+			return
+		}
+
+		funcMap := template.FuncMap{"fdate": formatTime}
+		t := template.Must(template.New("").Funcs(funcMap).ParseFS(filesTempl, "template/template.html", "template/navbar.html", "template/messages.html"))
+		t.ExecuteTemplate(w, "layout", data)
+	}
 }
 
 // handleWebsocketConn passes a Rabbit connection to the Websocket handler.
@@ -144,4 +171,16 @@ func handleNotFound(w http.ResponseWriter) {
 	w.WriteHeader(http.StatusNotFound)
 	t, _ := template.ParseFS(filesTempl, "template/404.html")
 	t.Execute(w, nil)
+}
+
+// formatTime returns time formatted for display.
+func formatTime(timestamp int64) string {
+	t := time.Unix(timestamp/1000, 0)
+
+	format := "3:04pm, Jan 2"
+	if t.Day() == time.Now().Day() {
+		format = "3:04pm"
+	}
+
+	return t.Format(format)
 }

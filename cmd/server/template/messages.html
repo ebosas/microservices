@@ -1,0 +1,27 @@
+{{ define "content" }}
+            <div class="container">
+                <h3 class="my-4 ps-2">Recent messages ({{ .Count }}/{{ .Total }})</h3>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Time</th>
+                            <th scope="col">Message</th>
+                            <th scope="col">Source</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {{ range .Messages }}
+                        <tr>
+                            <td>{{ .Time | fdate }}</td>
+                            <td>{{ .Text }}</td>
+                            <td>{{ .Source }}</td>
+                        </tr>
+                    {{ else }}
+                        <tr>
+                            <td colspan="3">No messages</td>
+                        </tr>
+                    {{ end }}
+                    </tbody>
+                </table>
+            </div>
+{{ end }}
