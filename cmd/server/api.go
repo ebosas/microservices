@@ -9,7 +9,7 @@ import (
 	"github.com/go-redis/redis/v8"
 )
 
-// handleAPICache handles an API call for cached messages
+// handleAPICache handles API calls for cached messages
 func handleAPICache(cr *redis.Client) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		data, err := cache.GetCacheJSON(cr)
