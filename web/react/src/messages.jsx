@@ -31,9 +31,9 @@ function Messages() {
             )
     }, []);
 
-    if (error){
+    if (error) {
         return <div className="container">Something went wrong</div>;
-    } else if (!isLoaded){
+    } else if (!isLoaded) {
         return <div className="container">Loading...</div>;
     } else {
         return (
@@ -55,6 +55,11 @@ function Messages() {
                                 <td>{msg.source}</td>
                             </tr>
                         ))}
+                        {!messages.length &&
+                            <tr>
+                                <td colSpan="3">No messages</td>
+                            </tr>
+                        }
                     </tbody>
                 </table>
             </div>

@@ -47,11 +47,11 @@ func main() {
 
 // updateRedis updates Redis with a new Rabbit message.
 func updateRedis(d amqp.Delivery, c *redis.Client) bool {
-	// Add a message, limit to 10 in cache, +1 total count.
+	// Add a message, limit to 10 in cache, increment total count.
 	if _, err := c.Pipelined(ctx, func(pipe redis.Pipeliner) error {
 		pipe.LPush(ctx, "messages", d.Body)
 		pipe.LTrim(ctx, "messages", 0, 9)
-		pipe.Incr(ctx, "count")
+		pipe.Incr(ctx, "total")
 		return nil
 	}); err != nil {
 		log.Fatalf("update redis: %s", err)

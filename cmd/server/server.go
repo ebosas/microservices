@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"embed"
-	"encoding/json"
 	"fmt"
 	"html/template"
 	"log"
@@ -73,32 +72,18 @@ func handleHome(w http.ResponseWriter, r *http.Request) {
 // handleMessages handles the messages page.
 func handleMessages(cr *redis.Client) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		cacheJSON, err := cache.GetCacheJSON(cr)
+		cacheData, cacheJSON, err := cache.GetCache(cr)
 		if err != nil {
 			log.Printf("get cache: %s", err)
 			return
 		}
 
-		var cached cache.Cache
-		err = json.Unmarshal([]byte(cacheJSON), &cached)
-		if err != nil {
-			log.Printf("unmarshal cache: %s", err)
-			return
-		}
-
 		data := map[string]interface{}{
-			"Data": cached,
+			"Data": cacheData,
 			"Json": cacheJSON,
 		}
 
-		// data := struct {
-		// 	Data cache.Cache
-		// 	Json string
-		// }{cached, "Hello"}
-
-		// fmt.Println(data.Json)
-
-		funcMap := template.FuncMap{"fdate": formatTime}
+		funcMap := template.FuncMap{"ftime": formatTime}
 		t := template.Must(template.New("").Funcs(funcMap).ParseFS(filesTempl, "template/template.html", "template/navbar.html", "template/messages.html"))
 		t.ExecuteTemplate(w, "layout", data)
 	}

@@ -17,21 +17,21 @@ type Cache struct {
 	Messages []models.Message `json:"messages"`
 }
 
-// GetCache gets cached messages from Redis by
-// calling GetCacheJSON and unmarshalling the returned JSON.
-func GetCache(c *redis.Client) (*Cache, error) {
+// GetCache gets cached messages from Redis,
+// returns both a Cache struct and a JSON string.
+func GetCache(c *redis.Client) (*Cache, string, error) {
 	cacheJSON, err := GetCacheJSON(c)
 	if err != nil {
-		return &Cache{}, fmt.Errorf("get cache json: %v", err)
+		return &Cache{}, "", fmt.Errorf("get cache json: %v", err)
 	}
 
 	var cache Cache
 	err = json.Unmarshal([]byte(cacheJSON), &cache)
 	if err != nil {
-		return &Cache{}, fmt.Errorf("unmarshal cache: %v", err)
+		return &Cache{}, "", fmt.Errorf("unmarshal cache: %v", err)
 	}
 
-	return &cache, nil
+	return &cache, cacheJSON, nil
 }
 
 // GetCacheJSON reads cached messages from Redis, returns JSON.
@@ -41,8 +41,10 @@ func GetCacheJSON(c *redis.Client) (string, error) {
 		return "", fmt.Errorf("lrange redis: %v", err)
 	}
 
-	total, err := c.Get(context.Background(), "count").Result()
-	if err != nil {
+	total, err := c.Get(context.Background(), "total").Result()
+	if err == redis.Nil {
+		total = "0"
+	} else if err != nil {
 		return "", fmt.Errorf("get redis: %v", err)
 	}
 
