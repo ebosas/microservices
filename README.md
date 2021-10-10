@@ -7,6 +7,7 @@ A basic example of microservice architecture which demonstrates communication be
 * Uses WebSocket to talk to the front end
 * Stores data in PostgreSQL
 * Uses React for front end development
+* Uses Redis for cache
 * Builds and runs with Docker
 
 ![](demo.gif)

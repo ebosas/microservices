@@ -1,5 +1,4 @@
 import React from "react";
-import { format } from 'date-fns'
 
 let data = window.__DATA || null;
 data = data ? JSON.parse(data) : null;
@@ -50,27 +49,21 @@ function Messages() {
                     <tbody>
                         {messages.map(msg => (
                             <tr key={msg.time}>
-                                <td>{formatTime(msg.time)}</td>
+                                <td>{msg.timefmt} ago</td>
                                 <td>{msg.text}</td>
                                 <td>{msg.source}</td>
                             </tr>
                         ))}
-                        {!messages.length &&
+                        {!messages.length && (
                             <tr>
                                 <td colSpan="3">No messages</td>
                             </tr>
-                        }
+                        )}
                     </tbody>
                 </table>
             </div>
         );
     }
-}
-
-function formatTime(timestamp) {
-    const t = new Date(timestamp);
-    const fmt = (t.getDate() == new Date().getDate()) ? "h:mmaaa" : "h:mmaaa, MMM d";
-    return format(t, fmt);
 }
 
 export default Messages;

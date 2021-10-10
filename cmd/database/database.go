@@ -58,17 +58,13 @@ func insertToDB(d amqp.Delivery, c *pgx.Conn) bool {
 		log.Fatalf("insert into database: %s", err)
 	}
 
-	// An alternative query that returns the id of the inserted row.
+	// // An alternative query that returns the id of the inserted row.
 	// var id int64
 	// err = c.QueryRow(context.Background(), "insert into messages (message, created) values ($1, to_timestamp($2)) returning id", message.Text, message.Time/1000).Scan(&id)
 	// if err != nil {
 	// 	log.Fatalf("insert into database: %s", err)
 	// }
 	// fmt.Println(id)
-
-	// For cache, could send messages from here instead
-	// of doing it from the server and backend services.
-	// err = <Rabbit conn>.Publish(conf.Exchange, conf.KeyCache, d.Body)
 
 	return true
 }

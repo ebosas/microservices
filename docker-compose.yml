@@ -24,6 +24,15 @@ services:
             interval: 10s
             timeout: 10s
             retries: 5
+    redis:
+        image: "redis:6-alpine"
+        ports:
+            - 6379:6379
+        healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 10s
+            timeout: 10s
+            retries: 5
     server:
         build:
             context: .
@@ -58,6 +67,17 @@ services:
             rabbitmq:
                 condition: service_healthy
             postgres:
+                condition: service_healthy
+    cache:
+        build:
+            context: .
+            dockerfile: cache.Dockerfile
+        env_file:
+            - .env
+        depends_on:
+            rabbitmq:
+                condition: service_healthy
+            redis:
                 condition: service_healthy
 networks:
     default:

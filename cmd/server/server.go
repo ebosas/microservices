@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"embed"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"log"
@@ -72,19 +73,25 @@ func handleHome(w http.ResponseWriter, r *http.Request) {
 // handleMessages handles the messages page.
 func handleMessages(cr *redis.Client) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		cacheData, cacheJSON, err := cache.GetCache(cr)
+		cacheData, err := cache.GetCache(cr)
 		if err != nil {
 			log.Printf("get cache: %s", err)
 			return
 		}
 
-		data := map[string]interface{}{
-			"Data": cacheData,
-			"Json": cacheJSON,
+		cacheJSON, err := json.Marshal(cacheData)
+		if err != nil {
+			log.Printf("marshal cache: %s", err)
+			return
 		}
 
-		funcMap := template.FuncMap{"ftime": formatTime}
-		t := template.Must(template.New("").Funcs(funcMap).ParseFS(filesTempl, "template/template.html", "template/navbar.html", "template/messages.html"))
+		data := map[string]interface{}{
+			"Data": cacheData,
+			"Json": string(cacheJSON),
+		}
+
+		// funcMap := template.FuncMap{"ftime": timeutil.FormatDuration}
+		t := template.Must(template.New(""). /*Funcs(funcMap).*/ ParseFS(filesTempl, "template/template.html", "template/navbar.html", "template/messages.html"))
 		t.ExecuteTemplate(w, "layout", data)
 	}
 }
@@ -176,16 +183,4 @@ func handleNotFound(w http.ResponseWriter) {
 	w.WriteHeader(http.StatusNotFound)
 	t, _ := template.ParseFS(filesTempl, "template/404.html")
 	t.Execute(w, nil)
-}
-
-// formatTime returns time formatted for display.
-func formatTime(timestamp int64) string {
-	t := time.Unix(timestamp/1000, 0)
-
-	format := "3:04pm, Jan 2"
-	if t.Day() == time.Now().Day() {
-		format = "3:04pm"
-	}
-
-	return t.Format(format)
 }

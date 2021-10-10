@@ -12,7 +12,7 @@
                     <tbody>
                     {{ range .Data.Messages }}
                         <tr>
-                            <td>{{ .Time | ftime }}</td>
+                            <td>{{ .TimeFmt }} ago</td>
                             <td>{{ .Text }}</td>
                             <td>{{ .Source }}</td>
                         </tr>
