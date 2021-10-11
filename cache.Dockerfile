@@ -8,5 +8,4 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags '-s' -o cache .
 
 FROM scratch
 COPY --from=cache /go/src/app/cache /cache
-EXPOSE 8080
 CMD ["/cache"]

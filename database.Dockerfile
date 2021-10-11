@@ -8,5 +8,4 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags '-s' -o database .
 
 FROM scratch
 COPY --from=database /go/src/app/database /database
-EXPOSE 8080
 CMD ["/database"]

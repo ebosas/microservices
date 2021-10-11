@@ -8,5 +8,4 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags '-s' -o backend .
 
 FROM scratch
 COPY --from=backend /go/src/app/backend /backend
-EXPOSE 8080
 CMD ["/backend"]
