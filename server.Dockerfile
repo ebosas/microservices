@@ -15,7 +15,7 @@ COPY web/bootstrap .
 RUN npm run css
 
 # Build container for server
-FROM golang:1.16-alpine AS server
+FROM golang:1.17-alpine AS server
 WORKDIR /go/src/app
 COPY go.* .
 COPY internal ./internal

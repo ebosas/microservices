@@ -1,4 +1,4 @@
-FROM golang:1.16-alpine AS cache
+FROM golang:1.17-alpine AS cache
 WORKDIR /go/src/app
 COPY go.* .
 COPY internal ./internal

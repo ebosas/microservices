@@ -1,4 +1,4 @@
-FROM golang:1.16-alpine AS database
+FROM golang:1.17-alpine AS database
 WORKDIR /go/src/app
 COPY go.* .
 COPY internal ./internal

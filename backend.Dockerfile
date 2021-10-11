@@ -1,4 +1,4 @@
-FROM golang:1.16-alpine AS backend
+FROM golang:1.17-alpine AS backend
 WORKDIR /go/src/app
 COPY go.* .
 COPY internal ./internal
