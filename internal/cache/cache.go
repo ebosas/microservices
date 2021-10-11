@@ -37,7 +37,7 @@ func GetCache(c *redis.Client) (*Cache, error) {
 		return &Cache{}, fmt.Errorf("get redis: %v", err)
 	}
 
-	var msgsCache []Message
+	msgsCache := make([]Message, 0) // avoid null in JSON when empty
 	for _, messageJSON := range messages {
 		var message models.Message
 		err = json.Unmarshal([]byte(messageJSON), &message)
