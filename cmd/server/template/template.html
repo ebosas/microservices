@@ -1,4 +1,4 @@
-{{ define "layout" -}}
+{{define "layout" -}}
 <!doctype html>
 <html lang="en">
     <head>
@@ -6,15 +6,15 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="stylesheet" href="static/build/style.css">
-        {{ if and . .Json }}<script>window.__DATA="{{ .Json }}"</script>{{ end }}
+        {{if and . .Json}}<script>window.__DATA="{{.Json}}"</script>{{end -}}
     </head>
     <body>
         <div id="root" class="vh-100">
-            {{ template "navbar" . }}
-            {{ template "content" . }}
+            {{template "navbar" .}}
+            {{template "content" .}}
         </div>
         <script src="http://127.0.0.1:8000/index.js"></script>
         <!-- <script src="static/build/index.js"></script> -->
     </body>
 </html>
-{{- end }}
+{{- end}}

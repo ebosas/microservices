@@ -67,7 +67,7 @@ func handleHome(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	t := template.Must(template.ParseFS(filesTempl, "template/template.html", "template/navbar.html", "template/home.html"))
-	t.ExecuteTemplate(w, "layout", nil)
+	t.ExecuteTemplate(w, "layout", map[string]string{"Page": "home"})
 }
 
 // handleMessages handles the messages page.
@@ -88,6 +88,7 @@ func handleMessages(cr *redis.Client) func(w http.ResponseWriter, r *http.Reques
 		data := map[string]interface{}{
 			"Data": cacheData,
 			"Json": string(cacheJSON),
+			"Page": "messages",
 		}
 
 		// funcMap := template.FuncMap{"ftime": timeutil.FormatDuration}

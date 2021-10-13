@@ -1,6 +1,6 @@
-{{ define "content" -}}
+{{define "content" -}}
             <div class="container">
-                <h3 class="my-4 ps-2">Recent messages ({{ .Data.Count }}/{{ .Data.Total }})</h3>
+                <h3 class="my-4 ps-2">Recent messages ({{.Data.Count}}/{{.Data.Total}})</h3>
                 <table class="table">
                     <thead>
                         <tr>
@@ -10,18 +10,18 @@
                         </tr>
                     </thead>
                     <tbody>
-                    {{- range .Data.Messages }}
+                    {{- range .Data.Messages}}
                         <tr>
-                            <td>{{ .TimeFmt }} ago</td>
-                            <td>{{ .Text }}</td>
-                            <td>{{ .Source }}</td>
+                            <td>{{.TimeFmt}} ago</td>
+                            <td>{{.Text}}</td>
+                            <td>{{.Source}}</td>
                         </tr>
-                    {{- else }}
+                    {{- else}}
                         <tr>
                             <td colspan="3">No messages</td>
                         </tr>
-                    {{- end }}
+                    {{- end}}
                     </tbody>
                 </table>
             </div>
-{{- end }}
+{{- end}}
