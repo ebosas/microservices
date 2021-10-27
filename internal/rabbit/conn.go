@@ -1,6 +1,10 @@
 package rabbit
 
-import "github.com/streadway/amqp"
+import (
+	"crypto/tls"
+
+	"github.com/streadway/amqp"
+)
 
 // Conn returns a Rabbit connecton. Also, a channel to be used
 // in the main go routine.
@@ -11,7 +15,10 @@ type Conn struct {
 
 // GetConn established a Rabbit connection.
 func GetConn(rabbitURL string) (*Conn, error) {
-	conn, err := amqp.Dial(rabbitURL)
+	cfg := new(tls.Config)
+	cfg.InsecureSkipVerify = true // avoid error 'certificate signed by unknown authority'
+
+	conn, err := amqp.DialTLS(rabbitURL, cfg)
 	if err != nil {
 		return &Conn{}, err
 	}
