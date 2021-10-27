@@ -25,6 +25,12 @@ func main() {
 	}
 	defer connPG.Close(context.Background())
 
+	// The table is not created when deployed on AWS RDS.
+	_, err = connPG.Exec(context.Background(), "create table if not exists messages (id serial primary key, message text not null, created timestamp not null)")
+	if err != nil {
+		log.Fatalf("create table: %s", err)
+	}
+
 	// RabbitMQ connection
 	connMQ, err := rabbit.GetConn(conf.RabbitURL)
 	if err != nil {
