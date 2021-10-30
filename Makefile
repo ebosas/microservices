@@ -2,8 +2,7 @@
 
 project = microservices
 services = server cache database backend
-# Change to your own registry
-registry = 123456789012.dkr.ecr.us-west-1.amazonaws.com
+registry = 123456789012.dkr.ecr.us-west-1.amazonaws.com # change registry
 version ?= latest
 
 ecr: ecr-build ecr-publish
