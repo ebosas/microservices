@@ -74,7 +74,7 @@ To access the back end service, attach to its docker container from a separate t
 docker attach microservices_backend
 ```
 
-## Deployment on Amazon ECS/AWS Fargate
+## Deployment to Amazon ECS/AWS Fargate
 
 ### ECR
 

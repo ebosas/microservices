@@ -1,0 +1,179 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: The RabbitMQ, Redis, and PostgreSQL resources.
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: production
+    Description: "A friendly environment name that will be used for namespacing all cluster resources. Example: staging, qa, or production"
+  RabbitUsername:
+    Type: String
+    Default: rabbit
+    Description: A RabbitMQ username
+  PostgresUsername:
+    Type: String
+    Default: postgres
+    Description: A Postgres username
+  RabbitPassword:
+    NoEcho: true
+    Type: String
+    Default: Secret123456 # remove
+    AllowedPattern: "^[a-zA-Z0-9]{12,20}$"
+    Description: The RabbitMQ password
+  PostgresPassword:
+    NoEcho: true
+    Type: String
+    Default: Secret123456 # remove
+    AllowedPattern: "^[a-zA-Z0-9]{12,20}$"
+    Description: The Postgres password
+Resources:
+  # A RabbitMQ broker
+  RabbitMQ:
+    Type: AWS::AmazonMQ::Broker
+    Properties: 
+      AutoMinorVersionUpgrade: false
+      BrokerName: RabbitBroker
+      DeploymentMode: SINGLE_INSTANCE
+      EngineType: RABBITMQ
+      EngineVersion: 3.8.22
+      HostInstanceType: mq.t3.micro
+      PubliclyAccessible: false
+      SecurityGroups: [!Ref RabbitSecurityGroup]
+      SubnetIds:
+        - Fn::ImportValue: !Sub ${EnvironmentName}:PrivateSubnetOne
+      Users: 
+        - Password: !Ref RabbitPassword
+          Username: !Ref RabbitUsername
+  RabbitSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId:
+        Fn::ImportValue: !Sub ${EnvironmentName}:VpcId
+      GroupDescription: Access to RabbitMQ
+      SecurityGroupIngress:
+        - SourceSecurityGroupId:
+            Fn::ImportValue: !Sub ${EnvironmentName}:ContainerSecurityGroup
+          IpProtocol: tcp
+          FromPort: 5671
+          ToPort: 5671
+
+  # A Redis cluster
+  Redis:
+    Type: AWS::ElastiCache::CacheCluster
+    DeletionPolicy: Delete
+    Properties:    
+      Engine: redis
+      ClusterName: RedisCluster
+      CacheNodeType: cache.t2.micro
+      NumCacheNodes: 1
+      CacheSubnetGroupName: !Ref RedisSubnetGroup
+      VpcSecurityGroupIds: [!Ref RedisSecurityGroup]
+  RedisSubnetGroup:
+    Type: AWS::ElastiCache::SubnetGroup
+    Properties:
+      Description: !Sub ${EnvironmentName}-Redis
+      SubnetIds:
+        - Fn::ImportValue: !Sub ${EnvironmentName}:PrivateSubnetOne
+        - Fn::ImportValue: !Sub ${EnvironmentName}:PrivateSubnetTwo
+  RedisSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId:
+        Fn::ImportValue: !Sub ${EnvironmentName}:VpcId
+      GroupDescription: Access to Redis
+      SecurityGroupIngress:
+        - SourceSecurityGroupId:
+            Fn::ImportValue: !Sub ${EnvironmentName}:ContainerSecurityGroup
+          IpProtocol: tcp
+          FromPort: 6379
+          ToPort: 6379
+
+  # A Postgres database
+  Postgres:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Delete
+    Properties:
+      DBInstanceIdentifier: postgresinstance
+      DBName: microservices
+      DBInstanceClass: db.t2.micro
+      StorageType: gp2
+      AllocatedStorage: 20
+      MaxAllocatedStorage: 21
+      Engine: postgres
+      EngineVersion: 12.8
+      MasterUsername: !Ref PostgresUsername
+      MasterUserPassword: !Ref PostgresPassword
+      MultiAZ: false
+      PubliclyAccessible: false
+      VPCSecurityGroups: [!Ref PostgresSecurityGroup]
+      DBSubnetGroupName: !Ref PostgresSubnetGroup
+  PostgresSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: !Sub ${EnvironmentName}-Postgres
+      SubnetIds:
+        - Fn::ImportValue: !Sub ${EnvironmentName}:PrivateSubnetOne
+        - Fn::ImportValue: !Sub ${EnvironmentName}:PrivateSubnetTwo
+  PostgresSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId:
+        Fn::ImportValue: !Sub ${EnvironmentName}:VpcId
+      GroupDescription: Access to Postgres
+      SecurityGroupIngress:
+        - SourceSecurityGroupId:
+            Fn::ImportValue: !Sub ${EnvironmentName}:ContainerSecurityGroup
+          IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+        # - CidrIp: 0.0.0.0/0
+        #   IpProtocol: tcp
+        #   FromPort: 5432
+        #   ToPort: 5432
+
+  # # An example showing how to use Secrets Manager to generate login credentials.
+  # # Refer in templates like this '{{resolve:secretsmanager:RabbitSecrets::password}}' 
+  # RabbitSecrets:
+  #   Type: AWS::SecretsManager::Secret
+  #   Properties:
+  #     Name: RabbitSecrets
+  #     Description: This secret has a dynamically generated password
+  #     GenerateSecretString:
+  #       SecretStringTemplate: '{"username": "rabbit"}'
+  #       GenerateStringKey: "password"
+  #       PasswordLength: 15
+  #       ExcludeCharacters: ',:='
+
+  # Connection strings for the resources created in this stack, will be passed to
+  # services as environmental variables. This will expose passwords in SSM Parameter
+  # Store as well as the ECS tasks definitions interface. Instead, use Secrets
+  # Manager to generate passwords and retrieve directly in applicaton code as shown
+  # in the commented example above.
+  RabbitURLParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /microservices/${EnvironmentName}/rabbiturl
+      Type: String
+      Description: A connection string for RabbitMQ
+      Value:
+        Fn::Join:
+          - ''
+          - - !Sub amqps://${RabbitUsername}:${RabbitPassword}@
+            - !Select [1, !Split ['://', !Select [0, !GetAtt RabbitMQ.AmqpEndpoints]]]
+  PostgresURLParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /microservices/${EnvironmentName}/postgresurl
+      Type: String
+      Description: A connection string for Postgres
+      Value:
+        Fn::Join:
+          - ''
+          - - !Sub postgres://${PostgresUsername}:${PostgresPassword}@
+            - !Sub ${Postgres.Endpoint.Address}:${Postgres.Endpoint.Port}
+  RedisURLParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /microservices/${EnvironmentName}/redisurl
+      Type: String
+      Description: A connection string for Redis
+      Value: !Sub ${Redis.RedisEndpoint.Address}:${Redis.RedisEndpoint.Port}
