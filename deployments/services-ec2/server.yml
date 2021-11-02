@@ -9,6 +9,10 @@ Parameters:
     Type: String
     Default: server
     Description: A name for the service
+  # ImageUrl:
+  #   Type: String
+  #   Description: The url of a docker image that contains the application process that
+  #                will handle the traffic for this service
   ContainerPort:
     Type: Number
     Default: 80
@@ -71,6 +75,7 @@ Resources:
           Cpu: !Ref 'ContainerCpu'
           Memory: !Ref 'ContainerMemory'
           Image: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/microservices/${ServiceName}:latest
+          # Image: !Ref ImageUrl
           PortMappings:
             - ContainerPort: !Ref 'ContainerPort'
           LogConfiguration:
