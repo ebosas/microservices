@@ -1,10 +1,10 @@
 # FROM golang:1.17-alpine AS cache
 FROM public.ecr.aws/bitnami/golang:1.17 AS cache
 WORKDIR /go/src/app
-COPY go.* .
+COPY go.* ./
 COPY internal ./internal
 RUN go mod download
-COPY cmd/cache .
+COPY cmd/cache ./
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags '-s' -o cache .
 
 FROM scratch
