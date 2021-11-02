@@ -174,28 +174,21 @@ Resources:
             pre_build:
               commands:
                 - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $REGISTRY
-                - IMAGE_SERVER=${REPO_SERVER}:${IMAGE_TAG}
-                - IMAGE_CACHE=${REPO_CACHE}:${IMAGE_TAG}
-                - IMAGE_DB=${REPO_DB}:${IMAGE_TAG}
             build:
               commands:
-                - docker build -t $IMAGE_SERVER -f server.Dockerfile .
-                - docker build -t $IMAGE_CACHE -f cache.Dockerfile .
-                - docker build -t $IMAGE_DB -f database.Dockerfile .
-                - docker tag $IMAGE_SERVER $REGISTRY/$IMAGE_SERVER
-                - docker tag $IMAGE_CACHE $REGISTRY/$IMAGE_CACHE
-                - docker tag $IMAGE_DB $REGISTRY/$IMAGE_DB
+                - docker build -t $IMAGE_SERVER_URI -f server.Dockerfile .
+                - docker build -t $IMAGE_CACHE_URI -f cache.Dockerfile .
+                - docker build -t $IMAGE_DB_URI -f database.Dockerfile .
             post_build:
               commands:
-                - docker push $REGISTRY/$IMAGE_SERVER
-                - docker push $REGISTRY/$IMAGE_CACHE
-                - docker push $REGISTRY/$IMAGE_DB
-                - printf '{"ImageServer":"%s", "ImageCache":"%s", "ImageDatabase":"%s"}' $REGISTRY/$IMAGE_SERVER $REGISTRY/$IMAGE_CACHE $REGISTRY/$IMAGE_DB > build.json
+                - docker push $IMAGE_SERVER_URI
+                - docker push $IMAGE_CACHE_URI
+                - docker push $IMAGE_DB_URI
+                - printf '{"ImageServerUri":"%s", "ImageCacheUri":"%s", "ImageDatabaseUri":"%s"}' $IMAGE_SERVER_URI $IMAGE_CACHE_URI $IMAGE_DB_URI > build.json
           artifacts:
             files: build.json
       Environment:
         ComputeType: BUILD_GENERAL1_SMALL
-        # Image: aws/codebuild/docker:17.09.0
         Image: aws/codebuild/standard:5.0
         Type: LINUX_CONTAINER
         PrivilegedMode: true
@@ -206,14 +199,12 @@ Resources:
           #   Value: !Ref AWS::AccountId
           - Name: REGISTRY
             Value: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com
-          - Name: REPO_SERVER
-            Value: !Ref ServerRepository
-          - Name: REPO_CACHE
-            Value: !Ref CacheRepository
-          - Name: REPO_DB
-            Value: !Ref DatabaseRepository
-          - Name: IMAGE_TAG
-            Value: latest
+          - Name: IMAGE_SERVER_URI
+            Value: !Sub ${ServerRepository.RepositoryUri}:latest
+          - Name: IMAGE_CACHE_URI
+            Value: !Sub ${CacheRepository.RepositoryUri}:latest
+          - Name: IMAGE_DB_URI
+            Value: !Sub ${DatabaseRepository.RepositoryUri}:latest
       Name: !Ref AWS::StackName
       ServiceRole: !Ref CodeBuildServiceRole
 
@@ -246,7 +237,7 @@ Resources:
               RunOrder: 1
 
         # Now we deploy the network resources: VPC, subnets, etc.
-        - Name: NetworkResources
+        - Name: Network
           Actions:
             - Name: Deploy
               ActionTypeId:
@@ -257,7 +248,7 @@ Resources:
               Configuration:
                 ActionMode: CREATE_UPDATE
                 RoleArn: !GetAtt CloudFormationDeployRole.Arn
-                StackName: !Sub ${EnvironmentName}-NetworkResources
+                StackName: !Sub ${EnvironmentName}-Network
                 TemplatePath: Source::deployments/network.yml
                 Capabilities: CAPABILITY_IAM
                 ParameterOverrides: !Sub |
@@ -267,12 +258,14 @@ Resources:
               InputArtifacts:
                 - Name: Source
               OutputArtifacts:
-                - Name: NetworkResources
+                - Name: Network
 
-        # Deploy the base resources: RabbitMQ, Redis, and Postgres
+        # Deploy the base resources: databases, the load balancer,
+        # and the Fargate cluster
         - Name: BaseResources
           Actions:
-            - Name: Deploy
+            # Deploy the resources: Rabbit, Redis, and Postgres
+            - Name: DeployResources
               ActionTypeId:
                 Category: Deploy
                 Owner: AWS
@@ -281,7 +274,7 @@ Resources:
               Configuration:
                 ActionMode: CREATE_UPDATE
                 RoleArn: !GetAtt CloudFormationDeployRole.Arn
-                StackName: !Sub ${EnvironmentName}-BaseResources
+                StackName: !Sub ${EnvironmentName}-Resources
                 TemplatePath: Source::deployments/resources.yml
                 Capabilities: CAPABILITY_IAM
                 ParameterOverrides: !Sub |
@@ -291,12 +284,10 @@ Resources:
               InputArtifacts:
                 - Name: Source
               OutputArtifacts:
-                - Name: BaseResources
+                - Name: Resources
 
-        # Deploy the application load balancer
-        - Name: LoadBalancerResources
-          Actions:
-            - Name: Deploy
+            # Deploy the application load balancer
+            - Name: DeployLoadBalancer
               ActionTypeId:
                 Category: Deploy
                 Owner: AWS
@@ -305,7 +296,7 @@ Resources:
               Configuration:
                 ActionMode: CREATE_UPDATE
                 RoleArn: !GetAtt CloudFormationDeployRole.Arn
-                StackName: !Sub ${EnvironmentName}-LoadBalancerResources
+                StackName: !Sub ${EnvironmentName}-LoadBalancer
                 TemplatePath: Source::deployments/alb.yml
                 Capabilities: CAPABILITY_IAM
                 ParameterOverrides: !Sub |
@@ -315,13 +306,10 @@ Resources:
               InputArtifacts:
                 - Name: Source
               OutputArtifacts:
-                - Name: LoadBalancerResources
+                - Name: LoadBalancer
 
-        # And deploy the cluster resources
-        - Name: ClusterResources
-          Actions:
             # Deploy the Fargate cluster
-            - Name: Deploy
+            - Name: DeployCluster
               ActionTypeId:
                 Category: Deploy
                 Owner: AWS
@@ -330,7 +318,7 @@ Resources:
               Configuration:
                 ActionMode: CREATE_UPDATE
                 RoleArn: !GetAtt CloudFormationDeployRole.Arn
-                StackName: !Sub ${EnvironmentName}-ClusterResources
+                StackName: !Sub ${EnvironmentName}-Cluster
                 TemplatePath: Source::deployments/cluster-fargate.yml
                 Capabilities: CAPABILITY_IAM
                 ParameterOverrides: !Sub |
@@ -340,9 +328,11 @@ Resources:
               InputArtifacts:
                 - Name: Source
               OutputArtifacts:
-                - Name: ClusterResources
+                - Name: Cluster
 
-            # Now we build the service images
+        # Now we build the service images
+        - Name: ServiceImages
+          Actions:
             - Name: Build
               ActionTypeId:
                 Category: Build
@@ -377,7 +367,7 @@ Resources:
                   {
                     "EnvironmentName": "${EnvironmentName}",
                     "ImageUrl": {
-                      "Fn::GetParam" : ["BuildOutput", "build.json", "ImageServer"]
+                      "Fn::GetParam" : ["BuildOutput", "build.json", "ImageServerUri"]
                     }
                   }
               InputArtifacts:
@@ -401,7 +391,7 @@ Resources:
                   {
                     "EnvironmentName": "${EnvironmentName}",
                     "ImageUrl": {
-                      "Fn::GetParam" : ["BuildOutput", "build.json", "ImageCache"]
+                      "Fn::GetParam" : ["BuildOutput", "build.json", "ImageCacheUri"]
                     }
                   }
               InputArtifacts:
@@ -425,7 +415,7 @@ Resources:
                   {
                     "EnvironmentName": "${EnvironmentName}",
                     "ImageUrl": {
-                      "Fn::GetParam" : ["BuildOutput", "build.json", "ImageDatabase"]
+                      "Fn::GetParam" : ["BuildOutput", "build.json", "ImageDatabaseUri"]
                     }
                   }
               InputArtifacts:
