@@ -4,7 +4,7 @@ Parameters:
   EnvironmentName:
     Type: String
     Default: production
-    Description: The name of the environment to add this load balancer to
+    Description: The name of the environment to add this load balancer to sadf
 Resources:
   EcsSecurityGroupIngressFromPublicALB:
     Type: AWS::EC2::SecurityGroupIngress
