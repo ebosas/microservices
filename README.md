@@ -15,7 +15,25 @@ A basic example of microservice architecture which demonstrates communication be
 
 ![](demo.gif)
 
-## Usage
+## Deployment on AWS Fargate
+
+`cd deployments` and create the pipeline stack:
+
+```bash
+aws cloudformation create-stack \
+	--stack-name MicroservicesPipeline \
+	--template-body file://pipeline.yml \
+	--parameters \
+		ParameterKey=DeploymentType,ParameterValue=fargate \
+		ParameterKey=EnvironmentName,ParameterValue=microservices \
+		ParameterKey=GitHubRepo,ParameterValue=<github_repo_name> \
+		ParameterKey=GitHubBranch,ParameterValue=<github_branch> \
+		ParameterKey=GitHubToken,ParameterValue=<github_token> \
+		ParameterKey=GitHubUser,ParameterValue=<github_user> \
+	--capabilities CAPABILITY_NAMED_IAM
+```
+
+## Local use
 
 To run the example, clone the Github repository and start the services using Docker Compose. Once Docker finishes downloading and building images, the front end is accessible by visiting `localhost:8080`.
 
