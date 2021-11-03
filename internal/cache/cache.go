@@ -47,7 +47,7 @@ func GetCache(c *redis.Client) (*Cache, error) {
 
 		msgsCache = append(msgsCache, Message{
 			Message: message,
-			TimeFmt: timeutil.FormatDuration(message.Time) + "^",
+			TimeFmt: timeutil.FormatDuration(message.Time),
 		})
 	}
 
