@@ -1,6 +1,6 @@
 # Microservices
 
-A basic example of microservice architecture which demonstrates communication between a few loosely coupled services.
+A basic example of microservice architecture which demonstrates communication between a few loosely coupled services and deployment to AWS.
 
 * Written in Go
 * Uses RabbitMQ to communicate between services
@@ -12,7 +12,7 @@ A basic example of microservice architecture which demonstrates communication be
 * Deployed on AWS with CloudFormation templates
     * ECS using EC2 instances
     * AWS Fargate
-* Uses CI/CD pipeline for continuous delivery
+* Uses CI/CD pipeline
 
 ![](demo.gif)
 
@@ -77,7 +77,7 @@ docker attach microservices_backend
 
 ## Deployment to Amazon ECS/AWS Fargate
 
-`cd deployments` and create the CI/CD pipeline stack. Then visit the `ExternalUrl` in the load balancer's Outputs tab in CloudFormation.
+`cd deployments` and create the CI/CD pipeline stack. Once finished, visit the `ExternalUrl` available in the load balancer's Outputs tab in CloudFormation.
 
 ```bash
 aws cloudformation create-stack \
