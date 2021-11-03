@@ -1,0 +1,214 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: EC2 ECS cluster running containers in public or private subnets.
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: production
+    Description: "A friendly environment name that will be used for namespacing all cluster resources. Example: staging, qa, or production"
+  InstanceType:
+    Type: String
+    Default: t2.micro
+    Description: Class of EC2 instance used to host containers. Choose t2 for testing, m5 for general purpose, c5 for CPU intensive services, and r5 for memory intensive services
+    AllowedValues: [ t2.micro, t2.small, t2.medium, t2.large, t2.xlarge, t2.2xlarge,
+     m5.large, m5.xlarge, m5.2xlarge, m5.4xlarge, m5.12xlarge, m5.24xlarge,
+     c5.large, c5.xlarge, c5.2xlarge, c5.4xlarge, c5.9xlarge, c5.18xlarge,
+     r5.large, r5.xlarge, r5.2xlarge, r5.4xlarge, r5.12xlarge, r5.24xlarge ]
+    ConstraintDescription: Please choose a valid instance type.
+  DesiredCapacity:
+    Type: Number
+    Default: '1'
+    Description: Number of EC2 instances to launch in your ECS cluster.
+  MaxSize:
+    Type: Number
+    Default: '3'
+    Description: Maximum number of EC2 instances that can be launched in your ECS cluster.
+  ECSAMI:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ecs/optimized-ami/amazon-linux-2/recommended/image_id
+    Description: The Amazon Machine Image ID used for the cluster, leave it as the default value to get the latest AMI
+Resources:
+  # ECS Resources
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+
+  # Autoscaling group. This launches the actual EC2 instances that will register
+  # themselves as members of the cluster, and run the docker containers.
+  ECSAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      # Protection from scale-in is required with capacity providers but
+      # the auto scaling group will have to be manually removed when deleting
+      # the ec2 cluster stack in cloudformation.
+      NewInstancesProtectedFromScaleIn: true
+      VPCZoneIdentifier:
+        # Choose private subnets if using NAT gateways
+        - Fn::ImportValue: !Sub ${EnvironmentName}:PublicSubnetOne
+        - Fn::ImportValue: !Sub ${EnvironmentName}:PublicSubnetTwo
+      LaunchConfigurationName: !Ref 'ContainerInstances'
+      MinSize: '1'
+      MaxSize: !Ref 'MaxSize'
+      DesiredCapacity: !Ref 'DesiredCapacity'
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT15M
+    UpdatePolicy:
+      AutoScalingReplacingUpdate:
+        WillReplace: true
+  ContainerInstances:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      ImageId: !Ref 'ECSAMI'
+      SecurityGroups:
+        - Fn::ImportValue: !Sub ${EnvironmentName}:ContainerSecurityGroup
+      InstanceType: !Ref 'InstanceType'
+      IamInstanceProfile: !Ref 'EC2InstanceProfile'
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash -xe
+          echo ECS_CLUSTER=${ECSCluster} >> /etc/ecs/ecs.config
+          yum install -y aws-cfn-bootstrap
+          /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource ECSAutoScalingGroup --region ${AWS::Region}
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles: [!Ref 'EC2Role']
+
+  # Capacity provider. Automatically manages the scaling of the EC2 instances.
+  ECSCapacityProvider:
+    Type: AWS::ECS::CapacityProvider
+    Properties:
+        AutoScalingGroupProvider:
+            AutoScalingGroupArn: !Ref ECSAutoScalingGroup
+            ManagedScaling:
+                MaximumScalingStepSize: 2
+                MinimumScalingStepSize: 1
+                Status: ENABLED
+                TargetCapacity: 100
+            ManagedTerminationProtection: ENABLED
+  ECSClusterCapProvAssoc:
+    Type: AWS::ECS::ClusterCapacityProviderAssociations
+    Properties:
+      Cluster: !Ref ECSCluster
+      CapacityProviders:
+        - !Ref ECSCapacityProvider
+      DefaultCapacityProviderStrategy:
+        - CapacityProvider: !Ref ECSCapacityProvider
+          Weight: 100
+
+  # A role used to allow AWS Autoscaling to inspect stats and adjust scaleable targets
+  # on your AWS account
+  AutoscalingRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [application-autoscaling.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Path: /
+      Policies:
+      - PolicyName: service-autoscaling
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action:
+              - 'application-autoscaling:*'
+              - 'cloudwatch:DescribeAlarms'
+              - 'cloudwatch:PutMetricAlarm'
+              - 'ecs:DescribeServices'
+              - 'ecs:UpdateService'
+            Resource: '*'
+
+  # Role for the EC2 hosts. This allows the ECS agent on the EC2 hosts
+  # to communciate with the ECS control plane, as well as download the docker
+  # images from ECR to run on your host.
+  EC2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [ec2.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Path: /
+      Policies:
+      - PolicyName: ecs-service
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action:
+              - 'ecs:CreateCluster'
+              - 'ecs:DeregisterContainerInstance'
+              - 'ecs:DiscoverPollEndpoint'
+              - 'ecs:Poll'
+              - 'ecs:RegisterContainerInstance'
+              - 'ecs:StartTelemetrySession'
+              - 'ecs:Submit*'
+              - 'logs:CreateLogStream'
+              - 'logs:PutLogEvents'
+              - 'ecr:GetAuthorizationToken'
+              - 'ecr:BatchGetImage'
+              - 'ecr:GetDownloadUrlForLayer'
+            Resource: '*'
+
+  # This is an IAM role which authorizes ECS to manage resources on your
+  # account on your behalf, such as updating your load balancer with the
+  # details of where your containers are, so that traffic can reach your
+  # containers.
+  ECSRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [ecs.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Path: /
+      Policies:
+      - PolicyName: ecs-service
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action:
+              # Rules which allow ECS to attach network interfaces to instances
+              # on your behalf in order for awsvpc networking mode to work right
+              - 'ec2:AttachNetworkInterface'
+              - 'ec2:CreateNetworkInterface'
+              - 'ec2:CreateNetworkInterfacePermission'
+              - 'ec2:DeleteNetworkInterface'
+              - 'ec2:DeleteNetworkInterfacePermission'
+              - 'ec2:Describe*'
+              - 'ec2:DetachNetworkInterface'
+
+              # Rules which allow ECS to update load balancers on your behalf
+              # with the information sabout how to send traffic to your containers
+              - 'elasticloadbalancing:DeregisterInstancesFromLoadBalancer'
+              - 'elasticloadbalancing:DeregisterTargets'
+              - 'elasticloadbalancing:Describe*'
+              - 'elasticloadbalancing:RegisterInstancesWithLoadBalancer'
+              - 'elasticloadbalancing:RegisterTargets'
+            Resource: '*'
+
+# These are the values output by the CloudFormation template. Be careful
+# about changing any of them, because of them are exported with specific
+# names so that the other task related CF templates can use them.
+Outputs:
+  ClusterName:
+    Description: The name of the ECS cluster
+    Value: !Ref 'ECSCluster'
+    Export:
+      Name: !Sub ${EnvironmentName}:ClusterName
+  AutoscalingRole:
+    Description: The ARN of the role used for autoscaling
+    Value: !GetAtt 'AutoscalingRole.Arn'
+    Export:
+      Name: !Sub ${EnvironmentName}:AutoscalingRole
+  ECSRole:
+    Description: The ARN of the ECS role
+    Value: !GetAtt 'ECSRole.Arn'
+    Export:
+      Name: !Sub ${EnvironmentName}:ECSRole

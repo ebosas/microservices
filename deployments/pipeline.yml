@@ -10,6 +10,10 @@ Parameters:
     Type: String
   EnvironmentName:
     Type: String
+  DeploymentType:
+    Type: String
+    Default: fargate
+    AllowedValues: [ecs, fargate]
 
 Resources:
   # Create ECR respositories to hold built docker images
@@ -261,7 +265,7 @@ Resources:
                 - Name: Network
 
         # Deploy the base resources: databases, the load balancer,
-        # and the Fargate cluster
+        # and the ECS/Fargate cluster
         - Name: BaseResources
           Actions:
             # Deploy the resources: Rabbit, Redis, and Postgres
@@ -308,7 +312,7 @@ Resources:
               OutputArtifacts:
                 - Name: LoadBalancer
 
-            # Deploy the Fargate cluster
+            # Deploy the ECS/Fargate cluster
             - Name: DeployCluster
               ActionTypeId:
                 Category: Deploy
@@ -319,7 +323,7 @@ Resources:
                 ActionMode: CREATE_UPDATE
                 RoleArn: !GetAtt CloudFormationDeployRole.Arn
                 StackName: !Sub ${EnvironmentName}-Cluster
-                TemplatePath: Source::deployments/cluster-fargate.yml
+                TemplatePath: !Sub Source::deployments/cluster-${DeploymentType}.yml
                 Capabilities: CAPABILITY_IAM
                 ParameterOverrides: !Sub |
                   {
@@ -347,7 +351,7 @@ Resources:
                 - Name: BuildOutput
               RunOrder: 1
 
-        # Finally we deploy the Fargate services to the cluster
+        # Finally we deploy the ECS/Fargate services to the cluster
         - Name: Deploy
           Actions:
             # Deploy the server service
@@ -361,7 +365,7 @@ Resources:
                 ActionMode: CREATE_UPDATE
                 RoleArn: !GetAtt CloudFormationDeployRole.Arn
                 StackName: !Sub ${EnvironmentName}-ServerService
-                TemplatePath: Source::deployments/services-fargate/server.yml
+                TemplatePath: !Sub Source::deployments/services-${DeploymentType}/server.yml
                 Capabilities: CAPABILITY_IAM
                 ParameterOverrides: !Sub |
                   {
@@ -385,7 +389,7 @@ Resources:
                 ActionMode: CREATE_UPDATE
                 RoleArn: !GetAtt CloudFormationDeployRole.Arn
                 StackName: !Sub ${EnvironmentName}-CacheService
-                TemplatePath: Source::deployments/services-fargate/cache.yml
+                TemplatePath: !Sub Source::deployments/services-${DeploymentType}/cache.yml
                 Capabilities: CAPABILITY_IAM
                 ParameterOverrides: !Sub |
                   {
@@ -409,7 +413,7 @@ Resources:
                 ActionMode: CREATE_UPDATE
                 RoleArn: !GetAtt CloudFormationDeployRole.Arn
                 StackName: !Sub ${EnvironmentName}-DatabaseService
-                TemplatePath: Source::deployments/services-fargate/database.yml
+                TemplatePath: !Sub Source::deployments/services-${DeploymentType}/database.yml
                 Capabilities: CAPABILITY_IAM
                 ParameterOverrides: !Sub |
                   {
