@@ -178,6 +178,10 @@ Resources:
             pre_build:
               commands:
                 - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $REGISTRY
+                - TAG=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | head -c 8)
+                - IMAGE_SERVER_URI=$REPO_SERVER_URI:$TAG
+                - IMAGE_CACHE_URI=$REPO_CACHE_URI:$TAG
+                - IMAGE_DB_URI=$REPO_DB_URI:$TAG
             build:
               commands:
                 - docker build -t $IMAGE_SERVER_URI -f server.Dockerfile .
@@ -203,12 +207,12 @@ Resources:
           #   Value: !Ref AWS::AccountId
           - Name: REGISTRY
             Value: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com
-          - Name: IMAGE_SERVER_URI
-            Value: !Sub ${ServerRepository.RepositoryUri}:latest
-          - Name: IMAGE_CACHE_URI
-            Value: !Sub ${CacheRepository.RepositoryUri}:latest
-          - Name: IMAGE_DB_URI
-            Value: !Sub ${DatabaseRepository.RepositoryUri}:latest
+          - Name: REPO_SERVER_URI
+            Value: !Sub ${ServerRepository.RepositoryUri}
+          - Name: REPO_CACHE_URI
+            Value: !Sub ${CacheRepository.RepositoryUri}
+          - Name: REPO_DB_URI
+            Value: !Sub ${DatabaseRepository.RepositoryUri}
       Name: !Ref AWS::StackName
       ServiceRole: !Ref CodeBuildServiceRole
 
