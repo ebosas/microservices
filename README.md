@@ -8,30 +8,13 @@ A basic example of microservice architecture which demonstrates communication be
 * Stores data in PostgreSQL
 * Stores cache in Redis
 * Uses React for front end development
-* Builds and runs with Docker
+* Builds with Docker
 * Deployed on AWS with CloudFormation templates
-    * ECS using EC2
+    * ECS using EC2 instances
     * AWS Fargate
+* Uses CI/CD pipeline for continuous delivery
 
 ![](demo.gif)
-
-## Deployment on AWS Fargate
-
-`cd deployments` and create the pipeline stack:
-
-```bash
-aws cloudformation create-stack \
-	--stack-name MicroservicesPipeline \
-	--template-body file://pipeline.yml \
-	--parameters \
-		ParameterKey=DeploymentType,ParameterValue=fargate \
-		ParameterKey=EnvironmentName,ParameterValue=microservices \
-		ParameterKey=GitHubRepo,ParameterValue=<github_repo_name> \
-		ParameterKey=GitHubBranch,ParameterValue=<github_branch> \
-		ParameterKey=GitHubToken,ParameterValue=<github_token> \
-		ParameterKey=GitHubUser,ParameterValue=<github_user> \
-	--capabilities CAPABILITY_NAMED_IAM
-```
 
 ## Local use
 
@@ -94,49 +77,42 @@ docker attach microservices_backend
 
 ## Deployment to Amazon ECS/AWS Fargate
 
-### ECR
-
-To deploy on ECS, the first step is to publish the service images to Amazon ECR. In Makefile, replace the `registry` variable with your own registry. [Login](https://docs.aws.amazon.com/AmazonECR/latest/userguide/registry_auth.html#get-login-password) to ECR. Then run the following command:
+`cd deployments` and create the CI/CD pipeline stack. Then visit the `ExternalUrl` in the load balancer's Outputs tab in CloudFormation.
 
 ```bash
-make ecr
+aws cloudformation create-stack \
+	--stack-name MicroservicesFargate \
+	--template-body file://pipeline.yml \
+	--parameters \
+		ParameterKey=DeploymentType,ParameterValue=fargate \
+		ParameterKey=EnvironmentName,ParameterValue=microservices-fargate \
+		ParameterKey=GitHubRepo,ParameterValue=<github_repo_name> \
+		ParameterKey=GitHubBranch,ParameterValue=<github_branch> \
+		ParameterKey=GitHubToken,ParameterValue=<github_token> \
+		ParameterKey=GitHubUser,ParameterValue=<github_user> \
+	--capabilities CAPABILITY_NAMED_IAM
 ```
 
-### CloudFormation stacks
+### Github repo setup
 
-There are several CloudFormation stacks to create. `cd deployments` and create the network stack:
+Fork this repo to have a copy in your Github account.
 
-```bash
-aws cloudformation create-stack --stack-name MicroservicesNetwork --template-body file://network.yml
-```
+Then, on the [Github access token page](https://github.com/settings/tokens), generate a new token with the following access:
 
-Create the following stacks in any order (for an EC2 cluster). To create a Fargate cluster, change the `cluster-ec2.yml` to `cluster-fargate.yml`.
-
-```bash
-aws cloudformation create-stack --stack-name MicroservicesResources --template-body file://resources.yml
-aws cloudformation create-stack --stack-name MicroservicesAlb --template-body file://alb.yml
-aws cloudformation create-stack --stack-name MicroservicesClusterEC2 --template-body file://cluster-ec2.yml --capabilities CAPABILITY_NAMED_IAM
-```
-
-Once done, create the services (for an EC2 cluster). For Fargate, change the `services-ec2` directory to `services-fargate`.
-
-```bash
-aws cloudformation create-stack --stack-name MicroservicesServiceServer --template-body file://services-ec2/server.yml
-aws cloudformation create-stack --stack-name MicroservicesServiceCache --template-body file://services-ec2/cache.yml
-aws cloudformation create-stack --stack-name MicroservicesServiceDatabase --template-body file://services-ec2/database.yml
-```
-
-To visit the website, head to the MicroservicesAlb stack and open the `ExternalUrl` from the Outputs tab.
+* `repo`
+* `admin:repo_hook`
 
 ### Deleting stacks
 
-When deleting the `cluster-ec2.yml` stack in CloudFormation, delete the auto scaling group manually from the AWS EC2 console.
+When deleting the ECS cluster stack (`cluster-ecs.yml`) in CloudFormation, the auto scaling group needs to be manually deleted. You can do it from the Auto Scaling Groups section in the AWS EC2 console.
+
+With capacity providers, container instances need to be protected from scale-in. This interferes with the automatic deletion process in CloudFormation. 
 
 ### References
 
 Deployment is based on these templates: https://github.com/nathanpeck/ecs-cloudformation
 
-## Development environment
+## Local development
 
 For development, run the RabbitMQ and Postgres containers with Docker Compose.
 
