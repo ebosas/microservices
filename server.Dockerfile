@@ -1,5 +1,5 @@
-# FROM node:14-alpine AS react
-# AWS CodeBuild fails due to Docker's pull rate limit.
+# FROM node:16-alpine AS react
+# AWS CodeBuild fails due to Docker's pull rate limit, using ECR.
 FROM public.ecr.aws/bitnami/node:16 AS react
 WORKDIR /usr/src/app
 COPY web/react/package*.json ./
@@ -7,7 +7,7 @@ RUN npm install
 COPY web/react ./
 RUN npm run build
 
-# FROM node:14-alpine AS bootstrap
+# FROM node:16-alpine AS bootstrap
 FROM public.ecr.aws/bitnami/node:16 AS bootstrap
 WORKDIR /usr/src/app
 COPY web/bootstrap/package*.json ./

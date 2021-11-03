@@ -1,5 +1,5 @@
 # FROM golang:1.17-alpine AS backend
-# AWS CodeBuild fails due to Docker's pull rate limit.
+# AWS CodeBuild fails due to Docker's pull rate limit, using ECR.
 FROM public.ecr.aws/bitnami/golang:1.17 AS backend
 WORKDIR /go/src/app
 COPY go.* ./
