@@ -9,10 +9,7 @@ A basic example of microservice architecture which demonstrates communication be
 * Stores cache in Redis
 * Uses React for front end development
 * Builds with Docker
-* Deployed on AWS with CloudFormation templates
-    * ECS using EC2
-    * AWS Fargate
-* Uses CI/CD pipeline
+* Deployed as containers on AWS
 
 ![](demo.gif)
 
