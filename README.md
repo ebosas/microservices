@@ -1,6 +1,6 @@
 # Microservices
 
-A basic example of microservice architecture which demonstrates communication between a few loosely coupled services and deployment to AWS.
+A basic example of microservice architecture which demonstrates communication between a few loosely coupled services.
 
 * Written in Go
 * Uses RabbitMQ to communicate between services
