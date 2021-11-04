@@ -37,7 +37,7 @@ function Messages() {
     } else {
         return (
             <div className="container">
-                <h3 className="my-4 ps-2">Recent messages ({counts.count}/{counts.total})</h3>
+                <h3 className="my-4 ps-2">Recent messages |||||| ({counts.count}/{counts.total})</h3>
                 <table className="table">
                     <thead>
                         <tr>
