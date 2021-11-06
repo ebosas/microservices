@@ -86,9 +86,9 @@ Resources:
               awslogs-stream-prefix: !Ref 'ServiceName'
           Environment:
             - Name: RABBIT_URL
-              Value: !Sub '{{resolve:ssm:/microservices/${EnvironmentName}/rabbiturl}}'
+              Value: '{{resolve:ssm:/Microservices/RabbitUrl}}'
             - Name: REDIS_URL
-              Value: !Sub '{{resolve:ssm:/microservices/${EnvironmentName}/redisurl}}'
+              Value: '{{resolve:ssm:/Microservices/RedisUrl}}'
             - Name: SERVER_ADDR
               Value: 0.0.0.0:80
 

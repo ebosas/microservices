@@ -151,7 +151,7 @@ Resources:
   RabbitURLParameter:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: !Sub /microservices/${EnvironmentName}/rabbiturl
+      Name: /Microservices/RabbitUrl
       Type: String
       Description: A connection string for RabbitMQ
       Value:
@@ -162,7 +162,7 @@ Resources:
   PostgresURLParameter:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: !Sub /microservices/${EnvironmentName}/postgresurl
+      Name: /Microservices/PostgresUrl
       Type: String
       Description: A connection string for Postgres
       Value:
@@ -173,7 +173,7 @@ Resources:
   RedisURLParameter:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: !Sub /microservices/${EnvironmentName}/redisurl
+      Name: /Microservices/RedisUrl
       Type: String
       Description: A connection string for Redis
       Value: !Sub ${Redis.RedisEndpoint.Address}:${Redis.RedisEndpoint.Port}

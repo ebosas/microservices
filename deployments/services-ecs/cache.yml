@@ -68,9 +68,9 @@ Resources:
               awslogs-stream-prefix: !Ref 'ServiceName'
           Environment:
             - Name: RABBIT_URL
-              Value: !Sub '{{resolve:ssm:/microservices/${EnvironmentName}/rabbiturl}}'
+              Value: '{{resolve:ssm:/Microservices/RabbitUrl}}'
             - Name: REDIS_URL
-              Value: !Sub '{{resolve:ssm:/microservices/${EnvironmentName}/redisurl}}'
+              Value: '{{resolve:ssm:/Microservices/RedisUrl}}'
 
   # The service. The service is a resource which allows you to run multiple
   # copies of a type of task, and gather up their logs and metrics, as well
