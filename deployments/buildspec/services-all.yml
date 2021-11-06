@@ -1,0 +1,22 @@
+version: 0.2
+phases:
+  pre_build:
+    commands:
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+      - TAG=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | head -c 8)
+      - IMAGE_SERVER_URI=$REPO_SERVER_URI:$TAG
+      - IMAGE_CACHE_URI=$REPO_CACHE_URI:$TAG
+      - IMAGE_DB_URI=$REPO_DB_URI:$TAG
+  build:
+    commands:
+      - docker build -t $IMAGE_SERVER_URI -f server.Dockerfile .
+      - docker build -t $IMAGE_CACHE_URI -f cache.Dockerfile .
+      - docker build -t $IMAGE_DB_URI -f database.Dockerfile .
+  post_build:
+    commands:
+      - docker push $IMAGE_SERVER_URI
+      - docker push $IMAGE_CACHE_URI
+      - docker push $IMAGE_DB_URI
+      - printf '{"ImageServerUri":"%s", "ImageCacheUri":"%s", "ImageDatabaseUri":"%s"}' $IMAGE_SERVER_URI $IMAGE_CACHE_URI $IMAGE_DB_URI > build.json
+artifacts:
+  files: build.json
