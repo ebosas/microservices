@@ -74,7 +74,7 @@ docker attach microservices_backend
 
 ## Deployment to Amazon ECS/AWS Fargate
 
-`cd deployments` and create the CI/CD pipeline stack. Once finished, visit the `ExternalUrl` available in the load balancer's Outputs tab in CloudFormation. 
+`cd deployments` and create the CI/CD pipeline stack. Once finished, visit the `ExternalUrl` available in the load balancer's Outputs tab in CloudFormation.
 
 ```bash
 aws cloudformation create-stack \
