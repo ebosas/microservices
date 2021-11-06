@@ -10,6 +10,7 @@ Parameters:
     Type: String
   EnvironmentName:
     Type: String
+    Default: production
   DeploymentType:
     Type: String
     Default: fargate
@@ -21,20 +22,14 @@ Resources:
     Type: AWS::ECR::Repository
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
-    Properties:
-      RepositoryName: !Sub ${EnvironmentName}-server
   CacheRepository:
     Type: AWS::ECR::Repository
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
-    Properties:
-      RepositoryName: !Sub ${EnvironmentName}-cache
   DatabaseRepository:
     Type: AWS::ECR::Repository
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
-    Properties:
-      RepositoryName: !Sub ${EnvironmentName}-database
 
   # A role used to give CodeBuild permission to access code,
   # build it, and upload the build results to ECR
@@ -169,8 +164,6 @@ Resources:
     Type: AWS::S3::Bucket
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
-    Properties:
-      BucketName: !Sub ${EnvironmentName}-${AWS::AccountId}
 
   # This is the definition of how to build the code in the repository
   CodeBuildProject:

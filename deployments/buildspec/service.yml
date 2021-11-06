@@ -1,0 +1,16 @@
+version: 0.2
+phases:
+  pre_build:
+    commands:
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+      - TAG=$(echo $GIT_COMMIT_ID | head -c 8)
+      - IMAGE_URI=$REPO_URI:$TAG
+  build:
+    commands:
+      - docker build -t $IMAGE_URI -f $SERVICE.Dockerfile .
+  post_build:
+    commands:
+      - docker push $IMAGE_URI
+      - printf '{"ImageUri":"%s"}' $IMAGE_URI > build.json
+artifacts:
+  files: build.json
