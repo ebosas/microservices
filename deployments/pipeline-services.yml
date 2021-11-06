@@ -22,14 +22,14 @@ Resources:
     Type: AWS::ECR::Repository
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
-  CacheRepository:
-    Type: AWS::ECR::Repository
-    DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain
-  DatabaseRepository:
-    Type: AWS::ECR::Repository
-    DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain
+  # CacheRepository:
+  #   Type: AWS::ECR::Repository
+  #   DeletionPolicy: Retain
+  #   UpdateReplacePolicy: Retain
+  # DatabaseRepository:
+  #   Type: AWS::ECR::Repository
+  #   DeletionPolicy: Retain
+  #   UpdateReplacePolicy: Retain
 
   # A role used to give CodeBuild permission to access code,
   # build it, and upload the build results to ECR
@@ -64,8 +64,8 @@ Resources:
                   - s3:GetObjectVersion
               - Resource:
                   - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/${ServerRepository}
-                  - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/${CacheRepository}
-                  - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/${DatabaseRepository}
+                  # - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/${CacheRepository}
+                  # - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/${DatabaseRepository}
                 Effect: Allow
                 Action:
                   - ecr:GetDownloadUrlForLayer
@@ -176,15 +176,19 @@ Resources:
         Type: GITHUB
         Location: !Sub https://github.com/${GitHubUser}/${GitHubRepo}.git
         BuildSpec: deployments/buildspec/service.yml
-      # SourceVersion: !Ref GitHubBranch
+      SourceVersion: !Ref GitHubBranch
       Environment:
         ComputeType: BUILD_GENERAL1_SMALL
         Image: aws/codebuild/standard:5.0
         Type: LINUX_CONTAINER
         PrivilegedMode: true
         EnvironmentVariables:
-          - Name: varName
-            Value: varValue
+          - Name: AWS_ACCOUNT_ID
+            Value: !Sub ${AWS::AccountId}
+          - Name: SERVICE
+            Value: server
+          - Name: REPO_URI
+            Value: !Sub ${ServerRepository.RepositoryUri}
       Triggers:
         Webhook: true
         FilterGroups:
@@ -195,20 +199,11 @@ Resources:
             Pattern: !Sub ^refs/heads/${GitHubBranch}$
             ExcludeMatchedPattern: false
           - Type: FILE_PATH
-            Pattern: ^cmd/server/.*
-            ExcludeMatchedPattern: false
-          - Type: FILE_PATH
-            Pattern: ^internal/.*
-            ExcludeMatchedPattern: false
-          - Type: FILE_PATH
-            Pattern: ^web/.*
-            ExcludeMatchedPattern: false
-          - Type: FILE_PATH
-            Pattern: ^server.Dockerfile$
+            Pattern: ^(cmd/server/|internal/|web/|server.Dockerfile)
             ExcludeMatchedPattern: false
       ServiceRole: !Ref CodeBuildServiceRole
       TimeoutInMinutes: 10
-              
+
   # GitHub source credentials 
   SourceCreds:
     Type: AWS::CodeBuild::SourceCredential
@@ -276,11 +271,6 @@ Resources:
   #                   {
   #                     "name":"REPO_URI",
   #                     "value":"${ServerRepository.RepositoryUri}",
-  #                     "type":"PLAINTEXT"
-  #                   },
-  #                   {
-  #                     "name":"GIT_COMMIT_ID",
-  #                     "value":"#{SourceVariables.CommitId}",
   #                     "type":"PLAINTEXT"
   #                   }
   #                 ]
@@ -374,11 +364,6 @@ Resources:
   #                     "name":"REPO_URI",
   #                     "value":"${CacheRepository.RepositoryUri}",
   #                     "type":"PLAINTEXT"
-  #                   },
-  #                   {
-  #                     "name":"GIT_COMMIT_ID",
-  #                     "value":"#{SourceVariables.CommitId}",
-  #                     "type":"PLAINTEXT"
   #                   }
   #                 ]
   #             InputArtifacts:
@@ -470,11 +455,6 @@ Resources:
   #                   {
   #                     "name":"REPO_URI",
   #                     "value":"${DatabaseRepository.RepositoryUri}",
-  #                     "type":"PLAINTEXT"
-  #                   },
-  #                   {
-  #                     "name":"GIT_COMMIT_ID",
-  #                     "value":"#{SourceVariables.CommitId}",
   #                     "type":"PLAINTEXT"
   #                   }
   #                 ]

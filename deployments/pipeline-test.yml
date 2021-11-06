@@ -1,0 +1,338 @@
+Parameters:
+  GitHubRepo:
+    Type: String
+  GitHubBranch:
+    Type: String
+  GitHubToken:
+    Type: String
+    NoEcho: true
+  GitHubUser:
+    Type: String
+  EnvironmentName:
+    Type: String
+    Default: production
+  DeploymentType:
+    Type: String
+    Default: fargate
+    AllowedValues: [ecs, fargate]
+
+Resources:
+  # Create ECR respositories to hold built docker images
+  ServerRepository:
+    Type: AWS::ECR::Repository
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+  # CacheRepository:
+  #   Type: AWS::ECR::Repository
+  #   DeletionPolicy: Retain
+  #   UpdateReplacePolicy: Retain
+  # DatabaseRepository:
+  #   Type: AWS::ECR::Repository
+  #   DeletionPolicy: Retain
+  #   UpdateReplacePolicy: Retain
+
+  # A role used to give CodeBuild permission to access code,
+  # build it, and upload the build results to ECR
+  CodeBuildServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Resource: "*"
+                Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                  - ecr:GetAuthorizationToken
+              - Resource: !Sub arn:aws:s3:::${ArtifactBucket}/*
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:GetObjectVersion
+              - Resource:
+                  - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/${ServerRepository}
+                  # - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/${CacheRepository}
+                  # - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/${DatabaseRepository}
+                Effect: Allow
+                Action:
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:BatchGetImage
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:PutImage
+                  - ecr:InitiateLayerUpload
+                  - ecr:UploadLayerPart
+                  - ecr:CompleteLayerUpload
+
+  # Role used to give CodePipeline to release a build.
+  CodePipelineServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codepipeline.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              # Allow codepipeline to put artifacts in the S3 bucket
+              # as well as get artifacts back out of it.
+              - Resource:
+                  - !Sub arn:aws:s3:::${ArtifactBucket}/*
+                Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:GetBucketVersioning
+              # Allow codepipeline to build code builds
+              - Resource: "*"
+                Effect: Allow
+                Action:
+                  - codebuild:StartBuild
+                  - codebuild:BatchGetBuilds
+                  - iam:PassRole
+              # Allow codepipeline to deploy cloudformation stacks
+              - Effect: Allow
+                Action:
+                  - cloudformation:CreateChangeSet
+                  - cloudformation:CreateStack
+                  - cloudformation:CreateUploadBucket
+                  - cloudformation:DeleteStack
+                  - cloudformation:Describe*
+                  - cloudformation:List*
+                  - cloudformation:UpdateStack
+                  - cloudformation:ValidateTemplate
+                  - cloudformation:ExecuteChangeSet
+                Resource: "*"
+
+  # CloudFormation deployment role. This role is passed by CodeBuild to
+  # CloudFormation to use when setting up the application resources
+  CloudFormationDeployRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudformation.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: deploy-stack
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "iam:*"
+                  - "ec2:*"
+                  - "ecs:*"
+                  - "elasticloadbalancing:*"
+                  - "autoscaling:*"
+                  - "elasticache:*"
+                  - "logs:*"
+                  - "application-autoscaling:*"
+                  - "cloudwatch:*"
+                  - "route53:*"
+                  - "rds:*"
+                  - "mq:*"
+                  # - "secretsmanager:*"
+                  - "ssm:*"
+                Resource: "*"
+
+  # While the build is in progress we need a place to store artifacts
+  ArtifactBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+
+  CodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Artifacts:
+        Type: CODEPIPELINE
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: deployments/buildspec/service.yml
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:5.0
+        Type: LINUX_CONTAINER
+        PrivilegedMode: true
+      Triggers:
+        Webhook: true
+        FilterGroups:
+        - - Type: EVENT
+            Pattern: PUSH
+            ExcludeMatchedPattern: false
+          - Type: HEAD_REF
+            Pattern: !Sub ^refs/heads/${GitHubBranch}$
+            ExcludeMatchedPattern: false
+          - Type: FILE_PATH
+            Pattern: ^cmd/server/.*
+            ExcludeMatchedPattern: false
+      ServiceRole: !Ref CodeBuildServiceRole
+      TimeoutInMinutes: 10
+
+  # This pipeline defines the steps to build, deploy, and release the application
+  Pipeline:
+    Type: AWS::CodePipeline::Pipeline
+    Properties:
+      RoleArn: !GetAtt CodePipelineServiceRole.Arn
+      ArtifactStore:
+        Type: S3
+        Location: !Ref ArtifactBucket
+      Stages:
+
+        # First we have to pull the source code from the Github repository
+        - Name: Source
+          Actions:
+            - Name: App
+              Namespace: SourceVariables
+              ActionTypeId:
+                Category: Source
+                Owner: ThirdParty
+                Version: 1
+                Provider: GitHub
+              Configuration:
+                Owner: !Ref GitHubUser
+                Repo: !Ref GitHubRepo
+                Branch: !Ref GitHubBranch
+                OAuthToken: !Ref GitHubToken
+              OutputArtifacts:
+                - Name: Source
+              RunOrder: 1
+
+        # Now we build the service images
+        - Name: ServiceImages
+          Actions:
+            - Name: Build
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Ref CodeBuildProject
+                EnvironmentVariables: !Sub |
+                  [
+                    {
+                      "name":"AWS_DEFAULT_REGION",
+                      "value":"${AWS::Region}",
+                      "type":"PLAINTEXT"
+                    },
+                    {
+                      "name":"AWS_ACCOUNT_ID",
+                      "value":"${AWS::AccountId}",
+                      "type":"PLAINTEXT"
+                    },
+                    {
+                      "name":"SERVICE",
+                      "value":"server",
+                      "type":"PLAINTEXT"
+                    },
+                    {
+                      "name":"REPO_URI",
+                      "value":"${ServerRepository.RepositoryUri}",
+                      "type":"PLAINTEXT"
+                    }
+                  ]
+              InputArtifacts:
+                - Name: Source
+              OutputArtifacts:
+                - Name: BuildOutput
+              RunOrder: 1
+
+        # Finally we deploy the ECS/Fargate services to the cluster
+        - Name: Deploy
+          Actions:
+            # Deploy the server service
+            - Name: DeployServer
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                RoleArn: !GetAtt CloudFormationDeployRole.Arn
+                StackName: !Sub ${EnvironmentName}-ServerService
+                TemplatePath: !Sub Source::deployments/services-${DeploymentType}/server.yml
+                Capabilities: CAPABILITY_IAM
+                ParameterOverrides: !Sub |
+                  {
+                    "EnvironmentName": "${EnvironmentName}",
+                    "ImageUrl": {
+                      "Fn::GetParam" : ["BuildOutput", "build.json", "ImageUri"]
+                    }
+                  }
+              InputArtifacts:
+                - Name: Source
+                - Name: BuildOutput
+
+            # # Deploy the cache service
+            # - Name: DeployCache
+            #   ActionTypeId:
+            #     Category: Deploy
+            #     Owner: AWS
+            #     Version: 1
+            #     Provider: CloudFormation
+            #   Configuration:
+            #     ActionMode: CREATE_UPDATE
+            #     RoleArn: !GetAtt CloudFormationDeployRole.Arn
+            #     StackName: !Sub ${EnvironmentName}-CacheService
+            #     TemplatePath: !Sub Source::deployments/services-${DeploymentType}/cache.yml
+            #     Capabilities: CAPABILITY_IAM
+            #     ParameterOverrides: !Sub |
+            #       {
+            #         "EnvironmentName": "${EnvironmentName}",
+            #         "ImageUrl": {
+            #           "Fn::GetParam" : ["BuildOutput", "build.json", "ImageCacheUri"]
+            #         }
+            #       }
+            #   InputArtifacts:
+            #     - Name: Source
+            #     - Name: BuildOutput
+
+            # # Deploy the database service
+            # - Name: DeployDatabase
+            #   ActionTypeId:
+            #     Category: Deploy
+            #     Owner: AWS
+            #     Version: 1
+            #     Provider: CloudFormation
+            #   Configuration:
+            #     ActionMode: CREATE_UPDATE
+            #     RoleArn: !GetAtt CloudFormationDeployRole.Arn
+            #     StackName: !Sub ${EnvironmentName}-DatabaseService
+            #     TemplatePath: !Sub Source::deployments/services-${DeploymentType}/database.yml
+            #     Capabilities: CAPABILITY_IAM
+            #     ParameterOverrides: !Sub |
+            #       {
+            #         "EnvironmentName": "${EnvironmentName}",
+            #         "ImageUrl": {
+            #           "Fn::GetParam" : ["BuildOutput", "build.json", "ImageDatabaseUri"]
+            #         }
+            #       }
+            #   InputArtifacts:
+            #     - Name: Source
+            #     - Name: BuildOutput
