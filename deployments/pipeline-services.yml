@@ -123,6 +123,23 @@ Resources:
                   - cloudformation:ValidateTemplate
                   - cloudformation:ExecuteChangeSet
                 Resource: "*"
+              # Allow codepipeline to get images from ECR.
+              # Actions from AmazonEC2ContainerRegistryReadOnly.
+              - Effect: Allow
+                Action:
+                  - ecr:GetAuthorizationToken
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:GetRepositoryPolicy
+                  - ecr:DescribeRepositories
+                  - ecr:ListImages
+                  - ecr:DescribeImages
+                  - ecr:BatchGetImage
+                  - ecr:GetLifecyclePolicy
+                  - ecr:GetLifecyclePolicyPreview
+                  - ecr:ListTagsForResource
+                  - ecr:DescribeImageScanFindings
+                Resource: "*"
 
   # CloudFormation deployment role. This role is passed by CodeBuild to
   # CloudFormation to use when setting up the application resources
@@ -201,6 +218,9 @@ Resources:
           - Type: FILE_PATH
             Pattern: ^(cmd/server/|internal/|web/|server.Dockerfile)
             ExcludeMatchedPattern: false
+          # - Type: COMMIT_MESSAGE
+          #   Pattern: \[(BuildServer|BuildAll)\]
+          #   ExcludeMatchedPattern: false
       ServiceRole: !Ref CodeBuildServiceRole
       TimeoutInMinutes: 10
 
@@ -212,98 +232,54 @@ Resources:
       ServerType: GITHUB
       AuthType: PERSONAL_ACCESS_TOKEN
 
-  # # Create three pipelines for the three services
-  # # Server pipeline
-  # PipelineServer:
-  #   Type: AWS::CodePipeline::Pipeline
-  #   Properties:
-  #     RoleArn: !GetAtt CodePipelineServiceRole.Arn
-  #     ArtifactStore:
-  #       Type: S3
-  #       Location: !Ref ArtifactBucket
-  #     Stages:
-  #       # Pull the source code from the Github repository
-  #       - Name: Source
-  #         Actions:
-  #           - Name: Source
-  #             Namespace: SourceVariables
-  #             ActionTypeId:
-  #               Category: Source
-  #               Owner: ThirdParty
-  #               Version: 1
-  #               Provider: GitHub
-  #             Configuration:
-  #               Owner: !Ref GitHubUser
-  #               Repo: !Ref GitHubRepo
-  #               Branch: !Ref GitHubBranch
-  #               OAuthToken: !Ref GitHubToken
-  #             OutputArtifacts:
-  #               - Name: Source
-  #             RunOrder: 1
-  #       # Build a service image
-  #       - Name: Build
-  #         Actions:
-  #           - Name: Build
-  #             ActionTypeId:
-  #               Category: Build
-  #               Owner: AWS
-  #               Version: 1
-  #               Provider: CodeBuild
-  #             Configuration:
-  #               ProjectName: !Ref CodeBuildProject
-  #               EnvironmentVariables: !Sub |
-  #                 [
-  #                   {
-  #                     "name":"AWS_DEFAULT_REGION",
-  #                     "value":"${AWS::Region}",
-  #                     "type":"PLAINTEXT"
-  #                   },
-  #                   {
-  #                     "name":"AWS_ACCOUNT_ID",
-  #                     "value":"${AWS::AccountId}",
-  #                     "type":"PLAINTEXT"
-  #                   },
-  #                   {
-  #                     "name":"SERVICE",
-  #                     "value":"server",
-  #                     "type":"PLAINTEXT"
-  #                   },
-  #                   {
-  #                     "name":"REPO_URI",
-  #                     "value":"${ServerRepository.RepositoryUri}",
-  #                     "type":"PLAINTEXT"
-  #                   }
-  #                 ]
-  #             InputArtifacts:
-  #               - Name: Source
-  #             OutputArtifacts:
-  #               - Name: BuildOutput
-  #             RunOrder: 1
-  #       # Deploy the service to the ECS/Fargate cluster
-  #       - Name: Deploy
-  #         Actions:
-  #           - Name: Deploy
-  #             ActionTypeId:
-  #               Category: Deploy
-  #               Owner: AWS
-  #               Version: 1
-  #               Provider: CloudFormation
-  #             Configuration:
-  #               ActionMode: CREATE_UPDATE
-  #               RoleArn: !GetAtt CloudFormationDeployRole.Arn
-  #               StackName: !Sub ${EnvironmentName}-ServerService
-  #               TemplatePath: !Sub Source::deployments/services-${DeploymentType}/server.yml
-  #               Capabilities: CAPABILITY_IAM
-  #               ParameterOverrides: !Sub |
-  #                 {
-  #                   "EnvironmentName": "${EnvironmentName}",
-  #                   "ImageUrl": {
-  #                     "Fn::GetParam" : ["BuildOutput", "build.json", "ImageUri"]
-  #                   }
-  #                 }
-  #             InputArtifacts:
-  #               - Name: Source
-  #               - Name: BuildOutput
+  # Pipeline
+  PipelineServer:
+    Type: AWS::CodePipeline::Pipeline
+    Properties:
+      RoleArn: !GetAtt CodePipelineServiceRole.Arn
+      ArtifactStore:
+        Type: S3
+        Location: !Ref ArtifactBucket
+      Stages:
+        # Pull the iamge from ECR
+        - Name: Source
+          Actions:
+            - Name: Source
+              ActionTypeId:
+                Category: Source
+                Owner: AWS
+                Version: 1
+                Provider: ECR
+              Configuration:
+                RepositoryName: !Ref ServerRepository
+                # ImageTag: latest
+              OutputArtifacts:
+                - Name: Source
+              RunOrder: 1
+        # Deploy the service to the ECS/Fargate cluster
+        - Name: Deploy
+          Actions:
+            - Name: Deploy
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                RoleArn: !GetAtt CloudFormationDeployRole.Arn
+                StackName: !Sub ${EnvironmentName}-ServerService
+                TemplatePath: !Sub Source::deployments/services-${DeploymentType}/server.yml
+                Capabilities: CAPABILITY_IAM
+                ParameterOverrides: !Sub |
+                  {
+                    "EnvironmentName": "${EnvironmentName}",
+                    "ImageUrl": {
+                      "Fn::GetParam" : ["Source", "imageDetail.json", "ImageURI"]
+                    }
+                  }
+              InputArtifacts:
+                - Name: Source
 
   # # The cache pipeline
   # PipelineCache:
