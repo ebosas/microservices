@@ -335,9 +335,7 @@ Resources:
                 ParameterOverrides: !Sub |
                   {
                     "EnvironmentName": "${EnvironmentName}",
-                    "ImageUrl": {
-                      "Fn::GetParam" : ["Source", "imageDetail.json", "ImageURI"]
-                    }
+                    "ImageUrl": "${ServerRepository.RepositoryUri}:latest"
                   }
               InputArtifacts:
                 - Name: Source
