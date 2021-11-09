@@ -218,9 +218,15 @@ Resources:
           - Type: FILE_PATH
             Pattern: ^(cmd/server/|internal/|web/|server.Dockerfile)
             ExcludeMatchedPattern: false
-          # - Type: COMMIT_MESSAGE
-          #   Pattern: \[(BuildServer|BuildAll)\]
-          #   ExcludeMatchedPattern: false
+        - - Type: EVENT
+            Pattern: PUSH
+            ExcludeMatchedPattern: false
+          - Type: HEAD_REF
+            Pattern: !Sub ^refs/heads/${GitHubBranch}$
+            ExcludeMatchedPattern: false
+          - Type: COMMIT_MESSAGE
+            Pattern: \[(BuildServer|BuildAll)\]
+            ExcludeMatchedPattern: false
       ServiceRole: !Ref CodeBuildServiceRole
       TimeoutInMinutes: 10
 
@@ -233,7 +239,9 @@ Resources:
       AuthType: PERSONAL_ACCESS_TOKEN
 
   # Pipeline
-  PipelineServer:
+  # Also need a CloudWatch event:
+  # https://docs.aws.amazon.com/codepipeline/latest/userguide/create-cwe-ecr-source-cfn.html
+  Pipeline:
     Type: AWS::CodePipeline::Pipeline
     Properties:
       RoleArn: !GetAtt CodePipelineServiceRole.Arn
@@ -241,9 +249,10 @@ Resources:
         Type: S3
         Location: !Ref ArtifactBucket
       Stages:
-        # Pull the iamge from ECR
+        # Get source artifacts
         - Name: Source
           Actions:
+            # Get an image from an ECR repository
             - Name: Source
               ActionTypeId:
                 Category: Source
@@ -255,6 +264,21 @@ Resources:
                 # ImageTag: latest
               OutputArtifacts:
                 - Name: Source
+              RunOrder: 1
+            # Get source from a GitHub repository
+            - Name: Code
+              ActionTypeId:
+                Category: Source
+                Owner: ThirdParty
+                Version: 1
+                Provider: GitHub
+              Configuration:
+                Owner: !Ref GitHubUser
+                Repo: !Ref GitHubRepo
+                Branch: !Ref GitHubBranch
+                # OAuthToken: !Ref GitHubToken
+              OutputArtifacts:
+                - Name: Code
               RunOrder: 1
         # Deploy the service to the ECS/Fargate cluster
         - Name: Deploy
@@ -280,6 +304,21 @@ Resources:
                   }
               InputArtifacts:
                 - Name: Source
+
+  # Webhook: 
+  #   Type: AWS::CodePipeline::Webhook
+  #   Properties:
+  #     AuthenticationConfiguration:
+  #       SecretToken: !Ref GitHubToken
+  #     Filters:
+  #       - JsonPath: "$.ref"
+  #         MatchEquals: refs/heads/{Branch}
+  #     Authentication: GITHUB_HMAC
+  #     TargetPipeline: !Ref Pipeline
+  #     TargetAction: Code
+  #     Name: MyWebhook
+  #     TargetPipelineVersion: !GetAtt Pipeline.Version
+  #     RegisterWithThirdParty: false
 
   # # The cache pipeline
   # PipelineCache:
