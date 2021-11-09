@@ -203,7 +203,9 @@ Resources:
   #       PrivilegedMode: true
   #     ServiceRole: !Ref CodeBuildServiceRole
 
-  # A webhook that triggers the pipeline
+  # A webhook for the pipeline. Is is not registered, so the pipeline is only
+  # triggered by a manual action. For this to work, PollForSourceChanges is
+  # set to false in the pipeline's source action config.
   PipelineWebhook: 
     Type: AWS::CodePipeline::Webhook
     Properties:
@@ -212,11 +214,13 @@ Resources:
       Filters:
         - JsonPath: "$.ref"
           MatchEquals: refs/heads/{Branch}
+        - JsonPath: "$.head_commit/message"
+          MatchEquals: '[DeployInfrastructure]'
       Authentication: GITHUB_HMAC
       TargetPipeline: !Ref Pipeline
       TargetAction: Source
       TargetPipelineVersion: !GetAtt Pipeline.Version
-      RegisterWithThirdParty: false
+      RegisterWithThirdParty: true
 
   # This pipeline defines the steps to build, deploy, and release the application
   Pipeline:
@@ -231,7 +235,7 @@ Resources:
         # First we have to pull the source code from the Github repository
         - Name: Source
           Actions:
-            - Name: App
+            - Name: Source
               ActionTypeId:
                 Category: Source
                 Owner: ThirdParty
