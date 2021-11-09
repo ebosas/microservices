@@ -332,6 +332,9 @@ Resources:
                 StackName: !Sub ${EnvironmentName}-ServerService
                 TemplatePath: !Sub SourceCode::deployments/services-${DeploymentType}/server.yml
                 Capabilities: CAPABILITY_IAM
+                # Error with Fn::GetParam:
+                # Latest action execution message
+                # All parameters in file imageDetail.json should be string
                 ParameterOverrides: !Sub |
                   {
                     "EnvironmentName": "${EnvironmentName}",
