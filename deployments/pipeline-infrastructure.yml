@@ -214,8 +214,6 @@ Resources:
       Filters:
         - JsonPath: "$.ref"
           MatchEquals: refs/heads/{Branch}
-        - JsonPath: "$.head_commit/message"
-          MatchEquals: '[DeployInfrastructure]'
       Authentication: GITHUB_HMAC
       TargetPipeline: !Ref Pipeline
       TargetAction: Source
