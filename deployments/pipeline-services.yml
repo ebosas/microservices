@@ -334,7 +334,7 @@ Resources:
                 Capabilities: CAPABILITY_IAM
                 # Error with Fn::GetParam:
                 # Latest action execution message
-                # All parameters in file imageDetail.json should be string
+                # All parameters in file imageDetail.json should be string 
                 ParameterOverrides: !Sub |
                   {
                     "EnvironmentName": "${EnvironmentName}",
