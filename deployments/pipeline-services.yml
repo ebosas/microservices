@@ -299,7 +299,7 @@ Resources:
                 RepositoryName: !Ref ServerRepository
                 ImageTag: latest
               OutputArtifacts:
-                - Name: Source
+                - Name: SourceImage
               RunOrder: 1
             # Get source from a GitHub repository
             - Name: Code
@@ -315,7 +315,7 @@ Resources:
                 OAuthToken: !Ref GitHubToken
                 PollForSourceChanges: false
               OutputArtifacts:
-                - Name: Code
+                - Name: SourceCode
               RunOrder: 1
         # Deploy the service to the ECS/Fargate cluster
         - Name: Deploy
@@ -330,16 +330,18 @@ Resources:
                 ActionMode: CREATE_UPDATE
                 RoleArn: !GetAtt CloudFormationDeployRole.Arn
                 StackName: !Sub ${EnvironmentName}-ServerService
-                TemplatePath: !Sub Code::deployments/services-${DeploymentType}/server.yml
+                TemplatePath: !Sub SourceCode::deployments/services-${DeploymentType}/server.yml
                 Capabilities: CAPABILITY_IAM
                 ParameterOverrides: !Sub |
                   {
                     "EnvironmentName": "${EnvironmentName}",
-                    "ImageUrl": "${ServerRepository.RepositoryUri}:latest"
+                    "ImageUrl": {
+                      "Fn::GetParam" : ["SourceImage", "imageDetail.json", "ImageURI"]
+                    }
                   }
               InputArtifacts:
-                - Name: Source
-                - Name: Code
+                - Name: SourceImage
+                - Name: SourceCode
 
   # A CloudWatch event that will trigger out pipeline when an image is pushed
   # to the specified ECR repository
