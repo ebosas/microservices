@@ -11,4 +11,5 @@ phases:
       - docker tag $REPO_URI:latest $REPO_URI:$TAG
   post_build:
     commands:
+      - docker push $REPO_URI:latest
       - docker push $REPO_URI:$TAG

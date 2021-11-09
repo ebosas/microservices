@@ -290,6 +290,7 @@ Resources:
           Actions:
             # Get an image from an ECR repository
             - Name: Source
+              Namespace: SourceVariables
               ActionTypeId:
                 Category: Source
                 Owner: AWS
@@ -338,9 +339,7 @@ Resources:
                 ParameterOverrides: !Sub |
                   {
                     "EnvironmentName": "${EnvironmentName}",
-                    "ImageUrl": {
-                      "Fn::GetParam" : ["SourceImage", "imageDetail.json", "ImageURI"]
-                    }
+                    "ImageUrl": "${ServerRepository.RepositoryUri}:#{SourceVariables.ImageDigest}"
                   }
               InputArtifacts:
                 - Name: SourceImage
