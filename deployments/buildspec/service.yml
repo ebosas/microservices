@@ -3,15 +3,13 @@ phases:
   pre_build:
     commands:
       - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
-      # - TAG=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | head -c 8)
-      - TAG=latest
-      - IMAGE_URI=$REPO_URI:$TAG
+      - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | head -c 8)
+      - TAG=${COMMIT_HASH:=latest}
   build:
     commands:
-      - docker build -t $IMAGE_URI -f $SERVICE.Dockerfile .
+      - docker build -t $REPO_URI:latest -f $SERVICE.Dockerfile .
+      - docker tag $REPO_URI:latest $REPO_URI:$TAG
   post_build:
     commands:
-      - docker push $IMAGE_URI
-      - printf '{"ImageUri":"%s"}' $IMAGE_URI > build.json
-artifacts:
-  files: build.json
+      - docker push $REPO_URI:latest
+      - docker push $REPO_URI:$TAG
