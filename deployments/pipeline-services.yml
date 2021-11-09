@@ -20,8 +20,8 @@ Resources:
   # Create ECR respositories to hold built docker images
   ServerRepository:
     Type: AWS::ECR::Repository
-    DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain
+    Properties:
+      RepositoryName: !Sub ${EnvironmentName}/server
   # CacheRepository:
   #   Type: AWS::ECR::Repository
   #   DeletionPolicy: Retain
@@ -176,11 +176,40 @@ Resources:
                   - "ssm:*"
                 Resource: "*"
 
+  # CloudWatch event role. This role allows an event to start our pipeline.
+  CloudWatchEventRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: cwe-pipeline-execution
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action: codepipeline:StartPipelineExecution
+                Resource: !Sub arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:${Pipeline}
+
   # While the build is in progress we need a place to store artifacts
   ArtifactBucket:
     Type: AWS::S3::Bucket
-    DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Sub microservices-services-${AWS::AccountId}
+
+  # GitHub source credentials 
+  SourceCreds:
+    Type: AWS::CodeBuild::SourceCredential
+    Properties:
+      Token: !Ref GitHubToken
+      ServerType: GITHUB
+      AuthType: PERSONAL_ACCESS_TOKEN
 
   # Build a service
   CodeBuildProject:
@@ -230,13 +259,20 @@ Resources:
       ServiceRole: !Ref CodeBuildServiceRole
       TimeoutInMinutes: 10
 
-  # GitHub source credentials 
-  SourceCreds:
-    Type: AWS::CodeBuild::SourceCredential
+  # A Webhook for the pipeline
+  PipelineWebhook: 
+    Type: AWS::CodePipeline::Webhook
     Properties:
-      Token: !Ref GitHubToken
-      ServerType: GITHUB
-      AuthType: PERSONAL_ACCESS_TOKEN
+      AuthenticationConfiguration:
+        SecretToken: !Ref GitHubToken
+      Filters:
+        - JsonPath: "$.ref"
+          MatchEquals: refs/heads/{Branch}
+      Authentication: GITHUB_HMAC
+      TargetPipeline: !Ref Pipeline
+      TargetAction: Code
+      TargetPipelineVersion: !GetAtt Pipeline.Version
+      RegisterWithThirdParty: false
 
   # Pipeline
   # Also need a CloudWatch event:
@@ -261,7 +297,7 @@ Resources:
                 Provider: ECR
               Configuration:
                 RepositoryName: !Ref ServerRepository
-                # ImageTag: latest
+                ImageTag: latest
               OutputArtifacts:
                 - Name: Source
               RunOrder: 1
@@ -276,7 +312,8 @@ Resources:
                 Owner: !Ref GitHubUser
                 Repo: !Ref GitHubRepo
                 Branch: !Ref GitHubBranch
-                # OAuthToken: !Ref GitHubToken
+                OAuthToken: !Ref GitHubToken
+                PollForSourceChanges: false
               OutputArtifacts:
                 - Name: Code
               RunOrder: 1
@@ -293,7 +330,7 @@ Resources:
                 ActionMode: CREATE_UPDATE
                 RoleArn: !GetAtt CloudFormationDeployRole.Arn
                 StackName: !Sub ${EnvironmentName}-ServerService
-                TemplatePath: !Sub Source::deployments/services-${DeploymentType}/server.yml
+                TemplatePath: !Sub Code::deployments/services-${DeploymentType}/server.yml
                 Capabilities: CAPABILITY_IAM
                 ParameterOverrides: !Sub |
                   {
@@ -304,21 +341,25 @@ Resources:
                   }
               InputArtifacts:
                 - Name: Source
+                - Name: Code
 
-  # Webhook: 
-  #   Type: AWS::CodePipeline::Webhook
-  #   Properties:
-  #     AuthenticationConfiguration:
-  #       SecretToken: !Ref GitHubToken
-  #     Filters:
-  #       - JsonPath: "$.ref"
-  #         MatchEquals: refs/heads/{Branch}
-  #     Authentication: GITHUB_HMAC
-  #     TargetPipeline: !Ref Pipeline
-  #     TargetAction: Code
-  #     Name: MyWebhook
-  #     TargetPipelineVersion: !GetAtt Pipeline.Version
-  #     RegisterWithThirdParty: false
+  # A CloudWatch event that will trigger out pipeline when an image is pushed
+  # to the specified ECR repository
+  CloudWatchEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventPattern:
+        detail:
+          action-type: [PUSH]
+          image-tag: [latest]
+          repository-name: [!Ref ServerRepository]
+          result: [SUCCESS]
+        detail-type: [ECR Image Action]
+        source: [aws.ecr]
+      Targets:
+        - Arn: !Sub arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:${Pipeline}
+          RoleArn: !GetAtt CloudWatchEventRole.Arn
+          Id: codepipeline-Pipeline
 
   # # The cache pipeline
   # PipelineCache:

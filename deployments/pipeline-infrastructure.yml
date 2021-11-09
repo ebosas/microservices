@@ -203,9 +203,9 @@ Resources:
   #       PrivilegedMode: true
   #     ServiceRole: !Ref CodeBuildServiceRole
 
-  # A webhook for the pipeline. Is is not registered, so the pipeline is only
-  # triggered by a manual action. For this to work, PollForSourceChanges is
-  # set to false in the pipeline's source action config.
+  # A Webhook for the pipeline. Triggered manually only. This is done by
+  # setting RegisterWithThirdParty to false. Also, PollForSourceChanges
+  # needs to be set to false in the pipeline's source action config.
   PipelineWebhook: 
     Type: AWS::CodePipeline::Webhook
     Properties:
