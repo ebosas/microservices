@@ -333,8 +333,8 @@ Resources:
                 StackName: !Sub ${EnvironmentName}-ServerService
                 TemplatePath: !Sub SourceCode::deployments/services-${DeploymentType}/server.yml
                 Capabilities: CAPABILITY_IAM
-                # Fn::GetParam fails to retrieve ImageURI from imageDetail.json:
-                # "All parameters in file imageDetail.json should be string"
+                # Using a digest as an image identifier, bacause with the 'latest'
+                # tag cfn does not make any updates upon image change.
                 ParameterOverrides: !Sub |
                   {
                     "EnvironmentName": "${EnvironmentName}",
