@@ -339,7 +339,7 @@ Resources:
                 ParameterOverrides: !Sub |
                   {
                     "EnvironmentName": "${EnvironmentName}",
-                    "ImageUrl": "${ServerRepository.RepositoryUri}:#{SourceVariables.ImageDigest}"
+                    "ImageUrl": "${ServerRepository.RepositoryUri}@#{SourceVariables.ImageDigest}"
                   }
               InputArtifacts:
                 - Name: SourceImage
