@@ -163,7 +163,7 @@ Resources:
   ArtifactBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub microservices-${AWS::AccountId}
+      BucketName: !Sub microservices-infrastructure-${AWS::AccountId}
 
   # # This is the definition of how to build the code in the repository
   # CodeBuildProject:
@@ -203,9 +203,7 @@ Resources:
   #       PrivilegedMode: true
   #     ServiceRole: !Ref CodeBuildServiceRole
 
-  # A Webhook for the pipeline. Triggered manually only. This is done by
-  # setting RegisterWithThirdParty to false. Also, PollForSourceChanges
-  # needs to be set to false in the pipeline's source action config.
+  # A Webhook for the pipeline which is set for manual action only
   PipelineWebhook: 
     Type: AWS::CodePipeline::Webhook
     Properties:
@@ -218,7 +216,7 @@ Resources:
       TargetPipeline: !Ref Pipeline
       TargetAction: Source
       TargetPipelineVersion: !GetAtt Pipeline.Version
-      RegisterWithThirdParty: false
+      RegisterWithThirdParty: false # only manual action
 
   # This pipeline defines the steps to build, deploy, and release the application
   Pipeline:
