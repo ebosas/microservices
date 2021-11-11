@@ -58,8 +58,7 @@ Resources:
                   - s3:GetObject
                   - s3:GetObjectVersion
                   - s3:GetBucketVersioning
-                  # For codestar connection to work
-                  - s3:PutObjectAcl
+                  - s3:PutObjectAcl # for codestar connection
               # Allow codepipeline to build code builds
               - Resource: "*"
                 Effect: Allow
@@ -169,11 +168,12 @@ Resources:
                 Owner: AWS
                 Version: 1
                 Provider: CodeStarSourceConnection
+              # https://docs.aws.amazon.com/codepipeline/latest/userguide/action-reference-CodestarConnectionSource.html
               Configuration:
                 ConnectionArn: !Ref CodeStarConnection
                 BranchName: !Ref GitHubBranch
                 FullRepositoryId: !Sub ${GitHubUser}/${GitHubRepo}
-                # PollForSourceChanges: false
+                DetectChanges: false # only manually
               OutputArtifacts:
                 - Name: Source
               RunOrder: 1
