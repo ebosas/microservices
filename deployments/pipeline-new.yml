@@ -48,6 +48,7 @@ Resources:
     DependsOn:
       - SSMArtifactBucket
       - SSMCodePipelineServiceRole
+      - SSMCloudFormationDeployRole
     Properties:
       RoleArn: !GetAtt CodePipelineServiceRole.Arn
       ArtifactStore:
@@ -162,71 +163,72 @@ Resources:
         #       InputArtifacts:
         #         - Name: Source
 
-        #-----------------------------------------------------------------------------#
-        # Services
-        #-----------------------------------------------------------------------------#
-        - Name: Services
-          Actions:
+        # #-----------------------------------------------------------------------------#
+        # # Services
+        # #-----------------------------------------------------------------------------#
+        # - Name: Services
+        #   Actions:
 
-            - Name: Server
-              ActionTypeId:
-                Category: Deploy
-                Owner: AWS
-                Version: 1
-                Provider: CloudFormation
-              Configuration:
-                ActionMode: CREATE_UPDATE
-                RoleArn: !GetAtt CloudFormationDeployRole.Arn
-                StackName: !Sub ${EnvironmentName}-Server
-                TemplatePath: !Sub Source::deployments/services-${DeploymentType}/server.yml
-                Capabilities: CAPABILITY_IAM
-                ParameterOverrides: !Sub |
-                  {
-                    "EnvironmentName": "${EnvironmentName}",
-                    "ServiceName": "server"
-                  }
-              InputArtifacts:
-                - Name: Source
+        #     - Name: Server
+        #       ActionTypeId:
+        #         Category: Deploy
+        #         Owner: AWS
+        #         Version: 1
+        #         Provider: CloudFormation
+        #       Configuration:
+        #         ActionMode: CREATE_UPDATE
+        #         RoleArn: !GetAtt CloudFormationDeployRole.Arn
+        #         StackName: !Sub ${EnvironmentName}-Server
+        #         TemplatePath: !Sub Source::deployments/services-${DeploymentType}/server.yml
+        #         Capabilities: CAPABILITY_IAM
+        #         ParameterOverrides: !Sub |
+        #           {
+        #             "EnvironmentName": "${EnvironmentName}",
+        #             "ServiceName": "server",
+        #             "ImageUrl": "don't have it yet"
+        #           }
+        #       InputArtifacts:
+        #         - Name: Source
 
-            - Name: Cache
-              ActionTypeId:
-                Category: Deploy
-                Owner: AWS
-                Version: 1
-                Provider: CloudFormation
-              Configuration:
-                ActionMode: CREATE_UPDATE
-                RoleArn: !GetAtt CloudFormationDeployRole.Arn
-                StackName: !Sub ${EnvironmentName}-Cache
-                TemplatePath: !Sub Source::deployments/services-${DeploymentType}/cache.yml
-                Capabilities: CAPABILITY_IAM
-                ParameterOverrides: !Sub |
-                  {
-                    "EnvironmentName": "${EnvironmentName}",
-                    "ServiceName": "cache"
-                  }
-              InputArtifacts:
-                - Name: Source
+        #     - Name: Cache
+        #       ActionTypeId:
+        #         Category: Deploy
+        #         Owner: AWS
+        #         Version: 1
+        #         Provider: CloudFormation
+        #       Configuration:
+        #         ActionMode: CREATE_UPDATE
+        #         RoleArn: !GetAtt CloudFormationDeployRole.Arn
+        #         StackName: !Sub ${EnvironmentName}-Cache
+        #         TemplatePath: !Sub Source::deployments/services-${DeploymentType}/cache.yml
+        #         Capabilities: CAPABILITY_IAM
+        #         ParameterOverrides: !Sub |
+        #           {
+        #             "EnvironmentName": "${EnvironmentName}",
+        #             "ServiceName": "cache"
+        #           }
+        #       InputArtifacts:
+        #         - Name: Source
 
-            - Name: Database
-              ActionTypeId:
-                Category: Deploy
-                Owner: AWS
-                Version: 1
-                Provider: CloudFormation
-              Configuration:
-                ActionMode: CREATE_UPDATE
-                RoleArn: !GetAtt CloudFormationDeployRole.Arn
-                StackName: !Sub ${EnvironmentName}-Database
-                TemplatePath: !Sub Source::deployments/services-${DeploymentType}/database.yml
-                Capabilities: CAPABILITY_IAM
-                ParameterOverrides: !Sub |
-                  {
-                    "EnvironmentName": "${EnvironmentName}",
-                    "ServiceName": "database"
-                  }
-              InputArtifacts:
-                - Name: Source
+        #     - Name: Database
+        #       ActionTypeId:
+        #         Category: Deploy
+        #         Owner: AWS
+        #         Version: 1
+        #         Provider: CloudFormation
+        #       Configuration:
+        #         ActionMode: CREATE_UPDATE
+        #         RoleArn: !GetAtt CloudFormationDeployRole.Arn
+        #         StackName: !Sub ${EnvironmentName}-Database
+        #         TemplatePath: !Sub Source::deployments/services-${DeploymentType}/database.yml
+        #         Capabilities: CAPABILITY_IAM
+        #         ParameterOverrides: !Sub |
+        #           {
+        #             "EnvironmentName": "${EnvironmentName}",
+        #             "ServiceName": "database"
+        #           }
+        #       InputArtifacts:
+        #         - Name: Source
 
 
         #-----------------------------------------------------------------------------#
@@ -252,7 +254,7 @@ Resources:
                     "ServiceName": "server",
                     "EnvironmentName": "${EnvironmentName}",
                     "DeploymentType": "${DeploymentType}",
-                    "TriggerMessagePattern": "\[(BuildServer|BuildAll)\]"
+                    "TriggerMessagePattern": "\[(BuildServer|BuildAll)\]",
                     "GitHubRepo": "${GitHubRepo}",
                     "GitHubBranch": "${GitHubBranch}",
                     "GitHubToken": "${GitHubToken}",
@@ -278,7 +280,7 @@ Resources:
                     "ServiceName": "cache",
                     "EnvironmentName": "${EnvironmentName}",
                     "DeploymentType": "${DeploymentType}",
-                    "TriggerMessagePattern": "\[(BuildCache|BuildAll)\]"
+                    "TriggerMessagePattern": "\[(BuildCache|BuildAll)\]",
                     "GitHubRepo": "${GitHubRepo}",
                     "GitHubBranch": "${GitHubBranch}",
                     "GitHubToken": "${GitHubToken}",
@@ -304,7 +306,7 @@ Resources:
                     "ServiceName": "database",
                     "EnvironmentName": "${EnvironmentName}",
                     "DeploymentType": "${DeploymentType}",
-                    "TriggerMessagePattern": "\[(BuildDatabase|BuildAll)\]"
+                    "TriggerMessagePattern": "\[(BuildDatabase|BuildAll)\]",
                     "GitHubRepo": "${GitHubRepo}",
                     "GitHubBranch": "${GitHubBranch}",
                     "GitHubToken": "${GitHubToken}",
@@ -429,6 +431,12 @@ Resources:
       Name: /microservices/codepipeline_service_role
       Type: String
       Value: !Ref CodePipelineServiceRole
+  SSMCloudFormationDeployRole:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /microservices/cloudformation_deploy_role
+      Type: String
+      Value: !Ref CloudFormationDeployRole
 
 
 Outputs:

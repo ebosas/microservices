@@ -29,13 +29,16 @@ Parameters:
   CodePipelineServiceRole:
     Type: AWS::SSM::Parameter::Value<String>
     Default: /microservices/codepipeline_service_role
+  CloudFormationDeployRole:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /microservices/cloudformation_deploy_role
 
 Resources:
 
   #-----------------------------------------------------------------------------#
   # ECR
   #-----------------------------------------------------------------------------#
-  ServerRepository:
+  Repository:
     Type: AWS::ECR::Repository
     Properties:
       RepositoryName: !Sub ${EnvironmentName}/${ServiceName}
@@ -72,7 +75,7 @@ Resources:
           - Name: SERVICE
             Value: server
           - Name: REPO_URI
-            Value: !Sub ${ServerRepository.RepositoryUri}
+            Value: !Sub ${Repository.RepositoryUri}
       Triggers:
         Webhook: true
         FilterGroups:
@@ -107,7 +110,7 @@ Resources:
         detail:
           action-type: [PUSH]
           image-tag: [latest]
-          repository-name: [!Ref ServerRepository]
+          repository-name: [!Ref Repository]
           result: [SUCCESS]
         detail-type: [ECR Image Action]
         source: [aws.ecr]
@@ -153,7 +156,7 @@ Resources:
                 Version: 1
                 Provider: ECR
               Configuration:
-                RepositoryName: !Ref ServerRepository
+                RepositoryName: !Ref Repository
                 ImageTag: latest
               OutputArtifacts:
                 - Name: Image
@@ -178,22 +181,6 @@ Resources:
         #-----------------------------------------------------------------------------#
         # Deploy
         #-----------------------------------------------------------------------------#
-        - Name: Deploy
-          Actions:
-            - Name: Deploy
-              ActionTypeId:
-                Category: Deploy
-                Owner: AWS
-                Version: 1
-                Provider: ECS
-              Configuration:
-                ClusterName:
-                  Fn::ImportValue: !Sub ${EnvironmentName}:ClusterName
-                ServiceName: !Ref ServiceName
-                FileName: imageDetail.json
-              InputArtifacts:
-                - Name: Image
-
         # - Name: Deploy
         #   Actions:
         #     - Name: Deploy
@@ -201,21 +188,37 @@ Resources:
         #         Category: Deploy
         #         Owner: AWS
         #         Version: 1
-        #         Provider: CloudFormation
+        #         Provider: ECS
         #       Configuration:
-        #         ActionMode: CREATE_UPDATE
-        #         RoleArn: !GetAtt CloudFormationDeployRole.Arn
-        #         StackName: !Sub ${EnvironmentName}-ServerService
-        #         TemplatePath: !Sub Code::deployments/services-${DeploymentType}/server.yml
-        #         Capabilities: CAPABILITY_IAM
-        #         ParameterOverrides: !Sub |
-        #           {
-        #             "EnvironmentName": "${EnvironmentName}",
-        #             "ImageUrl": "${ServerRepository.RepositoryUri}@#{ImageVariables.ImageDigest}"
-        #           }
+        #         ClusterName:
+        #           Fn::ImportValue: !Sub ${EnvironmentName}:ClusterName
+        #         ServiceName: !Ref ServiceName
+        #         FileName: imageDetail.json
         #       InputArtifacts:
         #         - Name: Image
-        #         - Name: Code
+
+        - Name: Deploy
+          Actions:
+            - Name: Deploy
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                RoleArn: !Ref CloudFormationDeployRole
+                StackName: !Sub ${EnvironmentName}-ServerService
+                TemplatePath: !Sub Code::deployments/services-${DeploymentType}/server.yml
+                Capabilities: CAPABILITY_IAM
+                ParameterOverrides: !Sub |
+                  {
+                    "EnvironmentName": "${EnvironmentName}",
+                    "ImageUrl": "${Repository.RepositoryUri}@#{ImageVariables.ImageDigest}"
+                  }
+              InputArtifacts:
+                - Name: Image
+                - Name: Code
 
   #-----------------------------------------------------------------------------#
   # Role for CodeBuild service
@@ -249,7 +252,7 @@ Resources:
                   - s3:GetObject
                   - s3:PutObject
                   - s3:GetObjectVersion
-              - Resource: !GetAtt ServerRepository.Arn
+              - Resource: !GetAtt Repository.Arn
                 Effect: Allow
                 Action:
                   - ecr:GetDownloadUrlForLayer
