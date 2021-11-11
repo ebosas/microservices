@@ -27,6 +27,16 @@ Resources:
       BucketName: !Sub microservices-${EnvironmentName}-${AWS::AccountId}
 
   #-----------------------------------------------------------------------------#
+  # Source Credentials
+  #-----------------------------------------------------------------------------#
+  SourceCredentials:
+    Type: AWS::CodeBuild::SourceCredential
+    Properties:
+      Token: !Ref GitHubToken
+      ServerType: GITHUB
+      AuthType: PERSONAL_ACCESS_TOKEN
+
+  #-----------------------------------------------------------------------------#
   # CodePipeline
   #-----------------------------------------------------------------------------#
   PipelineWebhook: 
@@ -47,7 +57,7 @@ Resources:
     Type: AWS::CodePipeline::Pipeline
     DependsOn:
       - SSMArtifactBucket
-      - SSMCodePipelineServiceRole
+      - SSMCodePipelineServiceRoleArn
       - SSMCloudFormationDeployRole
     Properties:
       RoleArn: !GetAtt CodePipelineServiceRole.Arn
@@ -409,11 +419,12 @@ Resources:
                   - "logs:*"
                   - "application-autoscaling:*"
                   - "cloudwatch:*"
-                  - "route53:*"
                   - "rds:*"
                   - "mq:*"
                   # - "secretsmanager:*"
                   - "ssm:*"
+                  - "codebuild:*"
+                  - "ecr:*"
                 Resource: "*"
 
   #-----------------------------------------------------------------------------#
@@ -425,12 +436,12 @@ Resources:
       Name: /microservices/artifact_bucket
       Type: String
       Value: !Ref ArtifactBucket
-  SSMCodePipelineServiceRole:
+  SSMCodePipelineServiceRoleArn:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: /microservices/codepipeline_service_role
+      Name: /microservices/codepipeline_service_role_arn
       Type: String
-      Value: !Ref CodePipelineServiceRole
+      Value: !GetAtt CodePipelineServiceRole.Arn
   SSMCloudFormationDeployRole:
     Type: AWS::SSM::Parameter
     Properties:

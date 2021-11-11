@@ -26,9 +26,9 @@ Parameters:
   ArtifactBucket:
     Type: AWS::SSM::Parameter::Value<String>
     Default: /microservices/artifact_bucket
-  CodePipelineServiceRole:
+  CodePipelineServiceRoleArn:
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /microservices/codepipeline_service_role
+    Default: /microservices/codepipeline_service_role_arn
   CloudFormationDeployRole:
     Type: AWS::SSM::Parameter::Value<String>
     Default: /microservices/cloudformation_deploy_role
@@ -46,16 +46,16 @@ Resources:
   #-----------------------------------------------------------------------------#
   # CodeBuild Project
   #-----------------------------------------------------------------------------#
-  SourceCreds:
-    Type: AWS::CodeBuild::SourceCredential
-    Properties:
-      Token: !Ref GitHubToken
-      ServerType: GITHUB
-      AuthType: PERSONAL_ACCESS_TOKEN
+  # SourceCredentials:
+  #   Type: AWS::CodeBuild::SourceCredential
+  #   Properties:
+  #     Token: !Ref GitHubToken
+  #     ServerType: GITHUB
+  #     AuthType: PERSONAL_ACCESS_TOKEN
 
   CodeBuildProject:
     Type: AWS::CodeBuild::Project
-    DependsOn: SourceCreds
+    # DependsOn: SourceCredentials
     Properties:
       Artifacts:
         Type: NO_ARTIFACTS
@@ -136,7 +136,7 @@ Resources:
   Pipeline:
     Type: AWS::CodePipeline::Pipeline
     Properties:
-      RoleArn: !Ref CodePipelineServiceRole
+      RoleArn: !Ref CodePipelineServiceRoleArn
       ArtifactStore:
         Type: S3
         Location: !Ref ArtifactBucket
@@ -252,7 +252,7 @@ Resources:
                   - s3:GetObject
                   - s3:PutObject
                   - s3:GetObjectVersion
-              - Resource: !GetAtt Repository.Arn
+              - Resource: "*" # !GetAtt Repository.Arn
                 Effect: Allow
                 Action:
                   - ecr:GetDownloadUrlForLayer
