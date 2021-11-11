@@ -29,9 +29,9 @@ Parameters:
   CodePipelineServiceRoleArn:
     Type: AWS::SSM::Parameter::Value<String>
     Default: /microservices/codepipeline_service_role_arn
-  CloudFormationDeployRole:
-    Type: AWS::SSM::Parameter::Value<String>
-    Default: /microservices/cloudformation_deploy_role
+  # CloudFormationDeployRole:
+  #   Type: AWS::SSM::Parameter::Value<String>
+  #   Default: /microservices/cloudformation_deploy_role
 
 Resources:
 
@@ -181,22 +181,6 @@ Resources:
         #-----------------------------------------------------------------------------#
         # Deploy
         #-----------------------------------------------------------------------------#
-        # - Name: Deploy
-        #   Actions:
-        #     - Name: Deploy
-        #       ActionTypeId:
-        #         Category: Deploy
-        #         Owner: AWS
-        #         Version: 1
-        #         Provider: ECS
-        #       Configuration:
-        #         ClusterName:
-        #           Fn::ImportValue: !Sub ${EnvironmentName}:ClusterName
-        #         ServiceName: !Ref ServiceName
-        #         FileName: imageDetail.json
-        #       InputArtifacts:
-        #         - Name: Image
-
         - Name: Deploy
           Actions:
             - Name: Deploy
@@ -204,21 +188,37 @@ Resources:
                 Category: Deploy
                 Owner: AWS
                 Version: 1
-                Provider: CloudFormation
+                Provider: ECS
               Configuration:
-                ActionMode: CREATE_UPDATE
-                RoleArn: !Ref CloudFormationDeployRole
-                StackName: !Sub ${EnvironmentName}-ServerService
-                TemplatePath: !Sub Code::deployments/services-${DeploymentType}/server.yml
-                Capabilities: CAPABILITY_IAM
-                ParameterOverrides: !Sub |
-                  {
-                    "EnvironmentName": "${EnvironmentName}",
-                    "ImageUrl": "${Repository.RepositoryUri}@#{ImageVariables.ImageDigest}"
-                  }
+                ClusterName:
+                  Fn::ImportValue: !Sub ${EnvironmentName}:ClusterName
+                ServiceName: !Ref ServiceName
+                FileName: imageDetail.json
               InputArtifacts:
                 - Name: Image
-                - Name: Code
+
+        # - Name: Deploy
+        #   Actions:
+        #     - Name: Deploy
+        #       ActionTypeId:
+        #         Category: Deploy
+        #         Owner: AWS
+        #         Version: 1
+        #         Provider: CloudFormation
+        #       Configuration:
+        #         ActionMode: CREATE_UPDATE
+        #         RoleArn: !Ref CloudFormationDeployRole
+        #         StackName: !Sub ${EnvironmentName}-ServerService
+        #         TemplatePath: !Sub Code::deployments/services-${DeploymentType}/server.yml
+        #         Capabilities: CAPABILITY_IAM
+        #         ParameterOverrides: !Sub |
+        #           {
+        #             "EnvironmentName": "${EnvironmentName}",
+        #             "ImageUrl": "${Repository.RepositoryUri}@#{ImageVariables.ImageDigest}"
+        #           }
+        #       InputArtifacts:
+        #         - Name: Image
+        #         - Name: Code
 
   #-----------------------------------------------------------------------------#
   # Role for CodeBuild service

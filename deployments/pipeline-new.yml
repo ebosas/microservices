@@ -173,72 +173,74 @@ Resources:
         #       InputArtifacts:
         #         - Name: Source
 
-        # #-----------------------------------------------------------------------------#
-        # # Services
-        # #-----------------------------------------------------------------------------#
-        # - Name: Services
-        #   Actions:
+        #-----------------------------------------------------------------------------#
+        # Services
+        #-----------------------------------------------------------------------------#
+        - Name: Services
+          Actions:
 
-        #     - Name: Server
-        #       ActionTypeId:
-        #         Category: Deploy
-        #         Owner: AWS
-        #         Version: 1
-        #         Provider: CloudFormation
-        #       Configuration:
-        #         ActionMode: CREATE_UPDATE
-        #         RoleArn: !GetAtt CloudFormationDeployRole.Arn
-        #         StackName: !Sub ${EnvironmentName}-Server
-        #         TemplatePath: !Sub Source::deployments/services-${DeploymentType}/server.yml
-        #         Capabilities: CAPABILITY_IAM
-        #         ParameterOverrides: !Sub |
-        #           {
-        #             "EnvironmentName": "${EnvironmentName}",
-        #             "ServiceName": "server",
-        #             "ImageUrl": "don't have it yet"
-        #           }
-        #       InputArtifacts:
-        #         - Name: Source
+            - Name: Server
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                RoleArn: !GetAtt CloudFormationDeployRole.Arn
+                StackName: !Sub ${EnvironmentName}-Server
+                TemplatePath: !Sub Source::deployments/services-${DeploymentType}/server.yml
+                Capabilities: CAPABILITY_IAM
+                ParameterOverrides: !Sub |
+                  {
+                    "EnvironmentName": "${EnvironmentName}",
+                    "ServiceName": "server",
+                    "ImageUrl": "amazon/amazon-ecs-sample"
+                  }
+              InputArtifacts:
+                - Name: Source
 
-        #     - Name: Cache
-        #       ActionTypeId:
-        #         Category: Deploy
-        #         Owner: AWS
-        #         Version: 1
-        #         Provider: CloudFormation
-        #       Configuration:
-        #         ActionMode: CREATE_UPDATE
-        #         RoleArn: !GetAtt CloudFormationDeployRole.Arn
-        #         StackName: !Sub ${EnvironmentName}-Cache
-        #         TemplatePath: !Sub Source::deployments/services-${DeploymentType}/cache.yml
-        #         Capabilities: CAPABILITY_IAM
-        #         ParameterOverrides: !Sub |
-        #           {
-        #             "EnvironmentName": "${EnvironmentName}",
-        #             "ServiceName": "cache"
-        #           }
-        #       InputArtifacts:
-        #         - Name: Source
+            - Name: Cache
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                RoleArn: !GetAtt CloudFormationDeployRole.Arn
+                StackName: !Sub ${EnvironmentName}-Cache
+                TemplatePath: !Sub Source::deployments/services-${DeploymentType}/cache.yml
+                Capabilities: CAPABILITY_IAM
+                ParameterOverrides: !Sub |
+                  {
+                    "EnvironmentName": "${EnvironmentName}",
+                    "ServiceName": "cache",
+                    "ImageUrl": "amazon/amazon-ecs-sample"
+                  }
+              InputArtifacts:
+                - Name: Source
 
-        #     - Name: Database
-        #       ActionTypeId:
-        #         Category: Deploy
-        #         Owner: AWS
-        #         Version: 1
-        #         Provider: CloudFormation
-        #       Configuration:
-        #         ActionMode: CREATE_UPDATE
-        #         RoleArn: !GetAtt CloudFormationDeployRole.Arn
-        #         StackName: !Sub ${EnvironmentName}-Database
-        #         TemplatePath: !Sub Source::deployments/services-${DeploymentType}/database.yml
-        #         Capabilities: CAPABILITY_IAM
-        #         ParameterOverrides: !Sub |
-        #           {
-        #             "EnvironmentName": "${EnvironmentName}",
-        #             "ServiceName": "database"
-        #           }
-        #       InputArtifacts:
-        #         - Name: Source
+            - Name: Database
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                RoleArn: !GetAtt CloudFormationDeployRole.Arn
+                StackName: !Sub ${EnvironmentName}-Database
+                TemplatePath: !Sub Source::deployments/services-${DeploymentType}/database.yml
+                Capabilities: CAPABILITY_IAM
+                ParameterOverrides: !Sub |
+                  {
+                    "EnvironmentName": "${EnvironmentName}",
+                    "ServiceName": "database",
+                    "ImageUrl": "amazon/amazon-ecs-sample"
+                  }
+              InputArtifacts:
+                - Name: Source
 
 
         #-----------------------------------------------------------------------------#
