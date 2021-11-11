@@ -258,7 +258,7 @@ Resources:
               Configuration:
                 ActionMode: CREATE_UPDATE
                 RoleArn: !GetAtt CloudFormationDeployRole.Arn
-                StackName: !Sub ${EnvironmentName}-ServerPipeline
+                StackName: !Sub ${EnvironmentName}-Pipeline-Server
                 TemplatePath: Source::deployments/pipeline-service.yml
                 Capabilities: CAPABILITY_IAM
                 ParameterOverrides: !Sub |
@@ -284,7 +284,7 @@ Resources:
               Configuration:
                 ActionMode: CREATE_UPDATE
                 RoleArn: !GetAtt CloudFormationDeployRole.Arn
-                StackName: !Sub ${EnvironmentName}-CachePipeline
+                StackName: !Sub ${EnvironmentName}-Pipeline-Cache
                 TemplatePath: Source::deployments/pipeline-service.yml
                 Capabilities: CAPABILITY_IAM
                 ParameterOverrides: !Sub |
@@ -310,7 +310,7 @@ Resources:
               Configuration:
                 ActionMode: CREATE_UPDATE
                 RoleArn: !GetAtt CloudFormationDeployRole.Arn
-                StackName: !Sub ${EnvironmentName}-DatabasePipeline
+                StackName: !Sub ${EnvironmentName}-Pipeline-Database
                 TemplatePath: Source::deployments/pipeline-service.yml
                 Capabilities: CAPABILITY_IAM
                 ParameterOverrides: !Sub |
