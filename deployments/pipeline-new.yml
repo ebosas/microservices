@@ -27,7 +27,7 @@ Resources:
       BucketName: !Sub microservices-${EnvironmentName}-${AWS::AccountId}
 
   #-----------------------------------------------------------------------------#
-  # Source Credentials
+  # Source Credentials (for CodeBuild)
   #-----------------------------------------------------------------------------#
   SourceCredentials:
     Type: AWS::CodeBuild::SourceCredential
@@ -425,6 +425,7 @@ Resources:
                   - "ssm:*"
                   - "codebuild:*"
                   - "ecr:*"
+                  - "codepipeline:*"
                 Resource: "*"
 
   #-----------------------------------------------------------------------------#
