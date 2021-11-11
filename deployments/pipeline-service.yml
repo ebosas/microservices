@@ -193,6 +193,10 @@ Resources:
                 ClusterName:
                   Fn::ImportValue: !Sub ${EnvironmentName}:ClusterName
                 ServiceName: !Ref ServiceName
+                # Needs imagedefinitions.json but ECR produces imageDetail.json.
+                # Need a build stage to build images or transform imageDetail.json
+                # as described here: https://stackoverflow.com/a/57015190
+                # Or use blue/green deployment
                 FileName: imageDetail.json
               InputArtifacts:
                 - Name: Image

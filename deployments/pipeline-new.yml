@@ -188,7 +188,7 @@ Resources:
               Configuration:
                 ActionMode: CREATE_UPDATE
                 RoleArn: !GetAtt CloudFormationDeployRole.Arn
-                StackName: !Sub ${EnvironmentName}-Server
+                StackName: !Sub ${EnvironmentName}-Service-Server
                 TemplatePath: !Sub Source::deployments/services-${DeploymentType}/server.yml
                 Capabilities: CAPABILITY_IAM
                 ParameterOverrides: !Sub |
@@ -209,7 +209,7 @@ Resources:
               Configuration:
                 ActionMode: CREATE_UPDATE
                 RoleArn: !GetAtt CloudFormationDeployRole.Arn
-                StackName: !Sub ${EnvironmentName}-Cache
+                StackName: !Sub ${EnvironmentName}-Service-Cache
                 TemplatePath: !Sub Source::deployments/services-${DeploymentType}/cache.yml
                 Capabilities: CAPABILITY_IAM
                 ParameterOverrides: !Sub |
@@ -230,7 +230,7 @@ Resources:
               Configuration:
                 ActionMode: CREATE_UPDATE
                 RoleArn: !GetAtt CloudFormationDeployRole.Arn
-                StackName: !Sub ${EnvironmentName}-Database
+                StackName: !Sub ${EnvironmentName}-Service-Database
                 TemplatePath: !Sub Source::deployments/services-${DeploymentType}/database.yml
                 Capabilities: CAPABILITY_IAM
                 ParameterOverrides: !Sub |

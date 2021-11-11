@@ -1,0 +1,25 @@
+# Parameters:
+#   GitHubRepo:
+#     Type: String
+#   GitHubBranch:
+#     Type: String
+#   GitHubToken:
+#     Type: String
+#     NoEcho: true
+#   GitHubUser:
+#     Type: String
+#   EnvironmentName:
+#     Type: String
+#     Default: production
+#   DeploymentType:
+#     Type: String
+#     Default: fargate
+#     AllowedValues: [ecs, fargate]
+
+Resources:
+
+  CodeStarConnection:
+    Type: AWS::CodeStarConnections::Connection
+    Properties:
+      ConnectionName: MyGitHubConnection
+      ProviderType: GitHub
