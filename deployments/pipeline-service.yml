@@ -23,6 +23,12 @@ Parameters:
     Type: String
     Description: A commit message that triggers the build process
     Default: \[BuildAll\]
+  ArtifactBucket:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /microservices/artifact_bucket
+  CodePipelineServiceRole:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /microservices/codepipeline_service_role
 
 Resources:
 
@@ -33,14 +39,6 @@ Resources:
     Type: AWS::ECR::Repository
     Properties:
       RepositoryName: !Sub ${EnvironmentName}/${ServiceName}
-
-  #-----------------------------------------------------------------------------#
-  # Artifact Bucket
-  #-----------------------------------------------------------------------------#
-  ArtifactBucket:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: !Sub microservices-services-${AWS::AccountId}
 
   #-----------------------------------------------------------------------------#
   # CodeBuild Project
@@ -135,7 +133,7 @@ Resources:
   Pipeline:
     Type: AWS::CodePipeline::Pipeline
     Properties:
-      RoleArn: !GetAtt CodePipelineServiceRole.Arn
+      RoleArn: !Ref CodePipelineServiceRole
       ArtifactStore:
         Type: S3
         Location: !Ref ArtifactBucket
@@ -146,8 +144,9 @@ Resources:
         #-----------------------------------------------------------------------------#
         - Name: Source
           Actions:
-            - Name: Source
-              Namespace: SourceVariables
+
+            - Name: Image
+              Namespace: ImageVariables
               ActionTypeId:
                 Category: Source
                 Owner: AWS
@@ -157,7 +156,7 @@ Resources:
                 RepositoryName: !Ref ServerRepository
                 ImageTag: latest
               OutputArtifacts:
-                - Name: SourceImage
+                - Name: Image
               RunOrder: 1
 
             - Name: Code
@@ -173,7 +172,7 @@ Resources:
                 OAuthToken: !Ref GitHubToken
                 PollForSourceChanges: false
               OutputArtifacts:
-                - Name: SourceCode
+                - Name: Code
               RunOrder: 1
 
         #-----------------------------------------------------------------------------#
@@ -186,122 +185,37 @@ Resources:
                 Category: Deploy
                 Owner: AWS
                 Version: 1
-                Provider: CloudFormation
+                Provider: ECS
               Configuration:
-                ActionMode: CREATE_UPDATE
-                RoleArn: !GetAtt CloudFormationDeployRole.Arn
-                StackName: !Sub ${EnvironmentName}-ServerService
-                TemplatePath: !Sub SourceCode::deployments/services-${DeploymentType}/server.yml
-                Capabilities: CAPABILITY_IAM
-                ParameterOverrides: !Sub |
-                  {
-                    "EnvironmentName": "${EnvironmentName}",
-                    "ImageUrl": "${ServerRepository.RepositoryUri}@#{SourceVariables.ImageDigest}"
-                  }
+                ClusterName:
+                  Fn::ImportValue: !Sub ${EnvironmentName}:ClusterName
+                ServiceName: !Ref ServiceName
+                FileName: imageDetail.json
               InputArtifacts:
-                - Name: SourceImage
-                - Name: SourceCode
+                - Name: Image
 
-  #-----------------------------------------------------------------------------#
-  # Role for CodePipeline service
-  #-----------------------------------------------------------------------------#
-  CodePipelineServiceRole:
-    Type: AWS::IAM::Role
-    Properties:
-      Path: /
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: codepipeline.amazonaws.com
-            Action: sts:AssumeRole
-      Policies:
-        - PolicyName: root
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              # Allow codepipeline to put artifacts in the S3 bucket
-              # as well as get artifacts back out of it.
-              - Resource:
-                  - !Sub arn:aws:s3:::${ArtifactBucket}/*
-                Effect: Allow
-                Action:
-                  - s3:PutObject
-                  - s3:GetObject
-                  - s3:GetObjectVersion
-                  - s3:GetBucketVersioning
-              # Allow codepipeline to build code builds
-              - Resource: "*"
-                Effect: Allow
-                Action:
-                  - codebuild:StartBuild
-                  - codebuild:BatchGetBuilds
-                  - iam:PassRole
-              # Allow codepipeline to deploy cloudformation stacks
-              - Effect: Allow
-                Action:
-                  - cloudformation:CreateChangeSet
-                  - cloudformation:CreateStack
-                  - cloudformation:CreateUploadBucket
-                  - cloudformation:DeleteStack
-                  - cloudformation:Describe*
-                  - cloudformation:List*
-                  - cloudformation:UpdateStack
-                  - cloudformation:ValidateTemplate
-                  - cloudformation:ExecuteChangeSet
-                Resource: "*"
-              # Allow codepipeline to get images from ECR
-              - Effect: Allow
-                Action:
-                  - ecr:GetAuthorizationToken
-                  - ecr:BatchCheckLayerAvailability
-                  - ecr:GetDownloadUrlForLayer
-                  - ecr:GetRepositoryPolicy
-                  - ecr:DescribeRepositories
-                  - ecr:ListImages
-                  - ecr:DescribeImages
-                  - ecr:BatchGetImage
-                  - ecr:GetLifecyclePolicy
-                  - ecr:GetLifecyclePolicyPreview
-                  - ecr:ListTagsForResource
-                  - ecr:DescribeImageScanFindings
-                Resource: "*"
-
-  # This role is passed by CodePipeline to CloudFormation to use
-  # when setting up resources in the pipeline
-  CloudFormationDeployRole:
-    Type: AWS::IAM::Role
-    Properties:
-      Path: /
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: cloudformation.amazonaws.com
-            Action: sts:AssumeRole
-      Policies:
-        - PolicyName: deploy-stack
-          PolicyDocument:
-            Statement:
-              - Effect: Allow
-                Action:
-                  - "iam:*"
-                  - "ec2:*"
-                  - "ecs:*"
-                  - "elasticloadbalancing:*"
-                  - "autoscaling:*"
-                  - "elasticache:*"
-                  - "logs:*"
-                  - "application-autoscaling:*"
-                  - "cloudwatch:*"
-                  - "route53:*"
-                  - "rds:*"
-                  - "mq:*"
-                  # - "secretsmanager:*"
-                  - "ssm:*"
-                Resource: "*"
+        # - Name: Deploy
+        #   Actions:
+        #     - Name: Deploy
+        #       ActionTypeId:
+        #         Category: Deploy
+        #         Owner: AWS
+        #         Version: 1
+        #         Provider: CloudFormation
+        #       Configuration:
+        #         ActionMode: CREATE_UPDATE
+        #         RoleArn: !GetAtt CloudFormationDeployRole.Arn
+        #         StackName: !Sub ${EnvironmentName}-ServerService
+        #         TemplatePath: !Sub Code::deployments/services-${DeploymentType}/server.yml
+        #         Capabilities: CAPABILITY_IAM
+        #         ParameterOverrides: !Sub |
+        #           {
+        #             "EnvironmentName": "${EnvironmentName}",
+        #             "ImageUrl": "${ServerRepository.RepositoryUri}@#{ImageVariables.ImageDigest}"
+        #           }
+        #       InputArtifacts:
+        #         - Name: Image
+        #         - Name: Code
 
   #-----------------------------------------------------------------------------#
   # Role for CodeBuild service

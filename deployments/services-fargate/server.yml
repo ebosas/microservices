@@ -80,7 +80,7 @@ Resources:
           Cpu: !Ref 'ContainerCpu'
           Memory: !Ref 'ContainerMemory'
           # Image: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/microservices/${ServiceName}:latest
-          Image: !Ref ImageUrl
+          # Image: !Ref ImageUrl
           PortMappings:
             - ContainerPort: !Ref 'ContainerPort'
           LogConfiguration:
