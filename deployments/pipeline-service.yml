@@ -3,23 +3,23 @@ Parameters:
     Type: String
   GitHubBranch:
     Type: String
-  GitHubToken:
-    Type: String
-    NoEcho: true
+  # GitHubToken:
+  #   Type: String
+  #   NoEcho: true
   GitHubUser:
     Type: String
   EnvironmentName:
     Type: String
     Default: production
-  DeploymentType:
-    Type: String
-    Default: fargate
-    AllowedValues: [ecs, fargate]
+  # DeploymentType:
+  #   Type: String
+  #   Default: fargate
+  #   AllowedValues: [ecs, fargate]
   ServiceName:
     Type: String
     Description: The name of the service
     AllowedValues: [server, cache, database]
-  TriggerMessagePattern:
+  TriggerPattern:
     Type: String
     Description: A commit message that triggers the build process
     Default: \[BuildAll\]
@@ -29,9 +29,6 @@ Parameters:
   CodePipelineServiceRoleArn:
     Type: AWS::SSM::Parameter::Value<String>
     Default: /microservices/codepipeline_service_role_arn
-  # CloudFormationDeployRole:
-  #   Type: AWS::SSM::Parameter::Value<String>
-  #   Default: /microservices/cloudformation_deploy_role
 
 Resources:
 
@@ -46,18 +43,10 @@ Resources:
   #-----------------------------------------------------------------------------#
   # CodeBuild Project
   #-----------------------------------------------------------------------------#
-  # SourceCredentials:
-  #   Type: AWS::CodeBuild::SourceCredential
-  #   Properties:
-  #     Token: !Ref GitHubToken
-  #     ServerType: GITHUB
-  #     AuthType: PERSONAL_ACCESS_TOKEN
-
-
   CodeBuildProject:
     Type: AWS::CodeBuild::Project
-    # DependsOn: SourceCredentials
     Properties:
+      Name: !Sub ${EnvironmentName}-${ServiceName}
       Artifacts:
         Type: S3
         Location: !Ref ArtifactBucket
@@ -94,7 +83,7 @@ Resources:
             Pattern: !Sub ^refs/heads/${GitHubBranch}$
             ExcludeMatchedPattern: false
           - Type: COMMIT_MESSAGE
-            Pattern: !Ref TriggerMessagePattern
+            Pattern: !Ref TriggerPattern
             ExcludeMatchedPattern: false
         # - - Type: EVENT
         #     Pattern: PUSH
@@ -125,20 +114,6 @@ Resources:
           RoleArn: !GetAtt CloudWatchEventRole.Arn
           Id: server-pipeline
 
-  # PipelineWebhook: 
-  #   Type: AWS::CodePipeline::Webhook
-  #   Properties:
-  #     AuthenticationConfiguration:
-  #       SecretToken: !Ref GitHubToken
-  #     Filters:
-  #       - JsonPath: "$.ref"
-  #         MatchEquals: refs/heads/{Branch}
-  #     Authentication: GITHUB_HMAC
-  #     TargetPipeline: !Ref Pipeline
-  #     TargetAction: Code
-  #     TargetPipelineVersion: !GetAtt Pipeline.Version
-  #     RegisterWithThirdParty: false # only manual action
-
   Pipeline:
     Type: AWS::CodePipeline::Pipeline
     Properties:
@@ -153,21 +128,6 @@ Resources:
         #-----------------------------------------------------------------------------#
         - Name: Source
           Actions:
-
-            # - Name: Image
-            #   Namespace: ImageVariables
-            #   ActionTypeId:
-            #     Category: Source
-            #     Owner: AWS
-            #     Version: 1
-            #     Provider: ECR
-            #   Configuration:
-            #     RepositoryName: !Ref Repository
-            #     ImageTag: latest
-            #   OutputArtifacts:
-            #     - Name: Image
-            #   RunOrder: 1
-
             - Name: Image
               ActionTypeId:
                 Category: Source
@@ -181,21 +141,6 @@ Resources:
               OutputArtifacts:
                 - Name: Image
               RunOrder: 1
-
-            # - Name: Code
-            #   ActionTypeId:
-            #     Category: Source
-            #     Owner: ThirdParty
-            #     Version: 1
-            #     Provider: GitHub
-            #   Configuration:
-            #     Owner: !Ref GitHubUser
-            #     Repo: !Ref GitHubRepo
-            #     Branch: !Ref GitHubBranch
-            #     OAuthToken: !Ref GitHubToken
-            #     PollForSourceChanges: false
-            #   OutputArtifacts:
-            #     - Name: Code
 
         #-----------------------------------------------------------------------------#
         # Deploy
@@ -215,30 +160,6 @@ Resources:
                 FileName: imagedefinitions.json
               InputArtifacts:
                 - Name: Image
-
-        # - Name: Deploy
-        #   Actions:
-        #     - Name: Deploy
-        #       ActionTypeId:
-        #         Category: Deploy
-        #         Owner: AWS
-        #         Version: 1
-        #         Provider: CloudFormation
-        #       Configuration:
-        #         ActionMode: CREATE_UPDATE
-        #         RoleArn: !Ref CloudFormationDeployRole
-        #         StackName: !Sub ${EnvironmentName}-Server-Service
-        #         TemplatePath: !Sub Code::deployments/services-${DeploymentType}/server.yml
-        #         Capabilities: CAPABILITY_IAM
-        #         ParameterOverrides: !Sub |
-        #           {
-        #             "EnvironmentName": "${EnvironmentName}",
-        #             "ServiceName": "${ServiceName}",
-        #             "ImageUrl": "${Repository.RepositoryUri}@#{ImageVariables.ImageDigest}"
-        #           }
-        #       InputArtifacts:
-        #         - Name: Image
-        #         - Name: Code
 
   #-----------------------------------------------------------------------------#
   # Role for CodeBuild service

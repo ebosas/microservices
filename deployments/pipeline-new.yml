@@ -60,7 +60,6 @@ Resources:
     DependsOn:
       - SSMArtifactBucket
       - SSMCodePipelineServiceRoleArn
-      # - SSMCloudFormationDeployRole
     Properties:
       RoleArn: !GetAtt CodePipelineServiceRole.Arn
       ArtifactStore:
@@ -269,11 +268,9 @@ Resources:
             #       {
             #         "EnvironmentName": "${EnvironmentName}",
             #         "ServiceName": "server",
-            #         "DeploymentType": "${DeploymentType}",
-            #         "TriggerMessagePattern": "[(BuildServer|BuildAll)]",
+            #         "TriggerPattern": "\\[(BuildServer|BuildAll)\\]",
             #         "GitHubRepo": "${GitHubRepo}",
             #         "GitHubBranch": "${GitHubBranch}",
-            #         "GitHubToken": "${GitHubToken}",
             #         "GitHubUser": "${GitHubUser}"
             #       }
             #   InputArtifacts:
@@ -295,11 +292,9 @@ Resources:
             #       {
             #         "EnvironmentName": "${EnvironmentName}",
             #         "ServiceName": "cache",
-            #         "DeploymentType": "${DeploymentType}",
-            #         "TriggerMessagePattern": "[(BuildCache|BuildAll)]",
+            #         "TriggerPattern": "\\[(BuildCache|BuildAll)\\]",
             #         "GitHubRepo": "${GitHubRepo}",
             #         "GitHubBranch": "${GitHubBranch}",
-            #         "GitHubToken": "${GitHubToken}",
             #         "GitHubUser": "${GitHubUser}"
             #       }
             #   InputArtifacts:
@@ -321,18 +316,16 @@ Resources:
                   {
                     "EnvironmentName": "${EnvironmentName}",
                     "ServiceName": "database",
-                    "DeploymentType": "${DeploymentType}",
-                    "TriggerMessagePattern": "\\[(BuildDatabase|BuildAll)\\]",
+                    "TriggerPattern": "\\[(BuildDatabase|BuildAll)\\]",
                     "GitHubRepo": "${GitHubRepo}",
                     "GitHubBranch": "${GitHubBranch}",
-                    "GitHubToken": "${GitHubToken}",
                     "GitHubUser": "${GitHubUser}"
                   }
               InputArtifacts:
                 - Name: Source
 
   #-----------------------------------------------------------------------------#
-  # Role for CodePipeline service
+  # Roles for CodePipeline service
   #-----------------------------------------------------------------------------#
   CodePipelineServiceRole:
     Type: AWS::IAM::Role
@@ -352,8 +345,8 @@ Resources:
             Statement:
               # Allow codepipeline to put artifacts in the S3 bucket
               # as well as get artifacts back out of it.
-              - Resource: "*"
-                  # - !Sub arn:aws:s3:::${ArtifactBucket}*
+              - Resource:
+                  - !Sub arn:aws:s3:::${ArtifactBucket}*
                 Effect: Allow
                 Action:
                   - s3:PutObject
@@ -445,7 +438,7 @@ Resources:
                   - "codepipeline:*"
                   - "events:*"
                   - "ecs:*"
-                  - "s3:*"
+                  # - "s3:*"
                 Resource: "*"
 
   #-----------------------------------------------------------------------------#
@@ -463,12 +456,6 @@ Resources:
       Name: /microservices/codepipeline_service_role_arn
       Type: String
       Value: !GetAtt CodePipelineServiceRole.Arn
-  # SSMCloudFormationDeployRole:
-  #   Type: AWS::SSM::Parameter
-  #   Properties:
-  #     Name: /microservices/cloudformation_deploy_role
-  #     Type: String
-  #     Value: !Ref CloudFormationDeployRole
 
 Outputs:
   PipelineUrl:
