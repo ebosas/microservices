@@ -396,6 +396,16 @@ Resources:
                   - ecr:ListTagsForResource
                   - ecr:DescribeImageScanFindings
                 Resource: "*"
+              # Allow codepipeline to deploy to ECS
+              - Effect: Allow
+                Action:
+                  - ecs:DescribeServices
+                  - ecs:DescribeTaskDefinition
+                  - ecs:DescribeTasks
+                  - ecs:ListTasks
+                  - ecs:RegisterTaskDefinition
+                  - ecs:UpdateService
+                Resource: "*"
 
   # This role is passed by CodePipeline to CloudFormation to use
   # when setting up resources in the pipeline
