@@ -17,19 +17,6 @@ Parameters:
     AllowedValues: [ecs, fargate]
 
 Resources:
-  # # Create ECR respositories to hold built docker images
-  # ServerRepository:
-  #   Type: AWS::ECR::Repository
-  #   DeletionPolicy: Retain
-  #   UpdateReplacePolicy: Retain
-  # CacheRepository:
-  #   Type: AWS::ECR::Repository
-  #   DeletionPolicy: Retain
-  #   UpdateReplacePolicy: Retain
-  # DatabaseRepository:
-  #   Type: AWS::ECR::Repository
-  #   DeletionPolicy: Retain
-  #   UpdateReplacePolicy: Retain
 
   # Role used to give CodePipeline to release a build.
   CodePipelineServiceRole:
@@ -58,7 +45,6 @@ Resources:
                   - s3:GetObject
                   - s3:GetObjectVersion
                   - s3:GetBucketVersioning
-                  - s3:PutObjectAcl # for codestar connection
               # Allow codepipeline to build code builds
               - Resource: "*"
                 Effect: Allow
@@ -78,13 +64,6 @@ Resources:
                   - cloudformation:UpdateStack
                   - cloudformation:ValidateTemplate
                   - cloudformation:ExecuteChangeSet
-                Resource: "*"
-              # Allow codepipeline use codestar connections
-              - Effect: Allow
-                Action:
-                  - codestar-connections:GetConnection
-                  - codestar-connections:UseConnection
-                  - codestar-connections:ListConnections
                 Resource: "*"
 
   # CloudFormation deployment role. This role is passed by CodeBuild to
@@ -128,26 +107,20 @@ Resources:
     Properties:
       BucketName: !Sub microservices-infrastructure-${AWS::AccountId}
 
-  CodeStarConnection:
-    Type: AWS::CodeStarConnections::Connection
+  # A Webhook for the pipeline which is set for manual action only
+  PipelineWebhook: 
+    Type: AWS::CodePipeline::Webhook
     Properties:
-      ConnectionName: MyGitHubConnection
-      ProviderType: GitHub
-
-  # # A Webhook for the pipeline which is set for manual action only
-  # PipelineWebhook: 
-  #   Type: AWS::CodePipeline::Webhook
-  #   Properties:
-  #     AuthenticationConfiguration:
-  #       SecretToken: !Ref GitHubToken
-  #     Filters:
-  #       - JsonPath: "$.ref"
-  #         MatchEquals: refs/heads/{Branch}
-  #     Authentication: GITHUB_HMAC
-  #     TargetPipeline: !Ref Pipeline
-  #     TargetAction: Source
-  #     TargetPipelineVersion: !GetAtt Pipeline.Version
-  #     RegisterWithThirdParty: false # only manual action
+      AuthenticationConfiguration:
+        SecretToken: !Ref GitHubToken
+      Filters:
+        - JsonPath: "$.ref"
+          MatchEquals: refs/heads/{Branch}
+      Authentication: GITHUB_HMAC
+      TargetPipeline: !Ref Pipeline
+      TargetAction: Source
+      TargetPipelineVersion: !GetAtt Pipeline.Version
+      RegisterWithThirdParty: false # only manual action
 
   # This pipeline defines the steps to build, deploy, and release the application
   Pipeline:
@@ -165,33 +138,18 @@ Resources:
             - Name: Source
               ActionTypeId:
                 Category: Source
-                Owner: AWS
+                Owner: ThirdParty
                 Version: 1
-                Provider: CodeStarSourceConnection
-              # https://docs.aws.amazon.com/codepipeline/latest/userguide/action-reference-CodestarConnectionSource.html
+                Provider: GitHub
               Configuration:
-                ConnectionArn: !Ref CodeStarConnection
-                BranchName: !Ref GitHubBranch
-                FullRepositoryId: !Sub ${GitHubUser}/${GitHubRepo}
-                DetectChanges: false # only manually
+                Owner: !Ref GitHubUser
+                Repo: !Ref GitHubRepo
+                Branch: !Ref GitHubBranch
+                OAuthToken: !Ref GitHubToken
+                PollForSourceChanges: false
               OutputArtifacts:
                 - Name: Source
               RunOrder: 1
-            # - Name: Source
-            #   ActionTypeId:
-            #     Category: Source
-            #     Owner: ThirdParty
-            #     Version: 1
-            #     Provider: GitHub
-            #   Configuration:
-            #     Owner: !Ref GitHubUser
-            #     Repo: !Ref GitHubRepo
-            #     Branch: !Ref GitHubBranch
-            #     OAuthToken: !Ref GitHubToken
-            #     PollForSourceChanges: false
-            #   OutputArtifacts:
-            #     - Name: Source
-            #   RunOrder: 1
 
         # Now we deploy the network resources: VPC, subnets, etc.
         - Name: Network
@@ -217,75 +175,75 @@ Resources:
               OutputArtifacts:
                 - Name: Network
 
-        # # Deploy the base resources: databases, the load balancer,
-        # # and the ECS/Fargate cluster
-        # - Name: BaseResources
-        #   Actions:
-        #     # Deploy the resources: Rabbit, Redis, and Postgres
-        #     - Name: DeployResources
-        #       ActionTypeId:
-        #         Category: Deploy
-        #         Owner: AWS
-        #         Version: 1
-        #         Provider: CloudFormation
-        #       Configuration:
-        #         ActionMode: CREATE_UPDATE
-        #         RoleArn: !GetAtt CloudFormationDeployRole.Arn
-        #         StackName: !Sub ${EnvironmentName}-Resources
-        #         TemplatePath: Source::deployments/resources.yml
-        #         Capabilities: CAPABILITY_IAM
-        #         ParameterOverrides: !Sub |
-        #           {
-        #             "EnvironmentName": "${EnvironmentName}"
-        #           }
-        #       InputArtifacts:
-        #         - Name: Source
-        #       OutputArtifacts:
-        #         - Name: Resources
+        # Deploy the base resources: databases, the load balancer,
+        # and the ECS/Fargate cluster
+        - Name: BaseResources
+          Actions:
+            # Deploy the resources: Rabbit, Redis, and Postgres
+            - Name: DeployResources
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                RoleArn: !GetAtt CloudFormationDeployRole.Arn
+                StackName: !Sub ${EnvironmentName}-Resources
+                TemplatePath: Source::deployments/resources.yml
+                Capabilities: CAPABILITY_IAM
+                ParameterOverrides: !Sub |
+                  {
+                    "EnvironmentName": "${EnvironmentName}"
+                  }
+              InputArtifacts:
+                - Name: Source
+              OutputArtifacts:
+                - Name: Resources
 
-        #     # Deploy the application load balancer
-        #     - Name: DeployLoadBalancer
-        #       ActionTypeId:
-        #         Category: Deploy
-        #         Owner: AWS
-        #         Version: 1
-        #         Provider: CloudFormation
-        #       Configuration:
-        #         ActionMode: CREATE_UPDATE
-        #         RoleArn: !GetAtt CloudFormationDeployRole.Arn
-        #         StackName: !Sub ${EnvironmentName}-LoadBalancer
-        #         TemplatePath: Source::deployments/alb.yml
-        #         Capabilities: CAPABILITY_IAM
-        #         ParameterOverrides: !Sub |
-        #           {
-        #             "EnvironmentName": "${EnvironmentName}"
-        #           }
-        #       InputArtifacts:
-        #         - Name: Source
-        #       OutputArtifacts:
-        #         - Name: LoadBalancer
+            # Deploy the application load balancer
+            - Name: DeployLoadBalancer
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                RoleArn: !GetAtt CloudFormationDeployRole.Arn
+                StackName: !Sub ${EnvironmentName}-LoadBalancer
+                TemplatePath: Source::deployments/alb.yml
+                Capabilities: CAPABILITY_IAM
+                ParameterOverrides: !Sub |
+                  {
+                    "EnvironmentName": "${EnvironmentName}"
+                  }
+              InputArtifacts:
+                - Name: Source
+              OutputArtifacts:
+                - Name: LoadBalancer
 
-        #     # Deploy the ECS/Fargate cluster
-        #     - Name: DeployCluster
-        #       ActionTypeId:
-        #         Category: Deploy
-        #         Owner: AWS
-        #         Version: 1
-        #         Provider: CloudFormation
-        #       Configuration:
-        #         ActionMode: CREATE_UPDATE
-        #         RoleArn: !GetAtt CloudFormationDeployRole.Arn
-        #         StackName: !Sub ${EnvironmentName}-Cluster
-        #         TemplatePath: !Sub Source::deployments/cluster-${DeploymentType}.yml
-        #         Capabilities: CAPABILITY_IAM
-        #         ParameterOverrides: !Sub |
-        #           {
-        #             "EnvironmentName": "${EnvironmentName}"
-        #           }
-        #       InputArtifacts:
-        #         - Name: Source
-        #       OutputArtifacts:
-        #         - Name: Cluster
+            # Deploy the ECS/Fargate cluster
+            - Name: DeployCluster
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                RoleArn: !GetAtt CloudFormationDeployRole.Arn
+                StackName: !Sub ${EnvironmentName}-Cluster
+                TemplatePath: !Sub Source::deployments/cluster-${DeploymentType}.yml
+                Capabilities: CAPABILITY_IAM
+                ParameterOverrides: !Sub |
+                  {
+                    "EnvironmentName": "${EnvironmentName}"
+                  }
+              InputArtifacts:
+                - Name: Source
+              OutputArtifacts:
+                - Name: Cluster
 
 Outputs:
   PipelineUrl:

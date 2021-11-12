@@ -103,21 +103,21 @@ Resources:
   #-----------------------------------------------------------------------------#
   # CodePipeline
   #-----------------------------------------------------------------------------#
-  CloudWatchEventRule:
-    Type: AWS::Events::Rule
-    Properties:
-      EventPattern:
-        detail:
-          action-type: [PUSH]
-          image-tag: [latest]
-          repository-name: [!Ref Repository]
-          result: [SUCCESS]
-        detail-type: [ECR Image Action]
-        source: [aws.ecr]
-      Targets:
-        - Arn: !Sub arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:${Pipeline}
-          RoleArn: !GetAtt CloudWatchEventRole.Arn
-          Id: server-pipeline
+  # CloudWatchEventRule:
+  #   Type: AWS::Events::Rule
+  #   Properties:
+  #     EventPattern:
+  #       detail:
+  #         action-type: [PUSH]
+  #         image-tag: [latest]
+  #         repository-name: [!Ref Repository]
+  #         result: [SUCCESS]
+  #       detail-type: [ECR Image Action]
+  #       source: [aws.ecr]
+  #     Targets:
+  #       - Arn: !Sub arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:${Pipeline}
+  #         RoleArn: !GetAtt CloudWatchEventRole.Arn
+  #         Id: server-pipeline
 
   PipelineWebhook: 
     Type: AWS::CodePipeline::Webhook
@@ -148,19 +148,19 @@ Resources:
         - Name: Source
           Actions:
 
-            - Name: Image
-              Namespace: ImageVariables
-              ActionTypeId:
-                Category: Source
-                Owner: AWS
-                Version: 1
-                Provider: ECR
-              Configuration:
-                RepositoryName: !Ref Repository
-                ImageTag: latest
-              OutputArtifacts:
-                - Name: Image
-              RunOrder: 1
+            # - Name: Image
+            #   Namespace: ImageVariables
+            #   ActionTypeId:
+            #     Category: Source
+            #     Owner: AWS
+            #     Version: 1
+            #     Provider: ECR
+            #   Configuration:
+            #     RepositoryName: !Ref Repository
+            #     ImageTag: latest
+            #   OutputArtifacts:
+            #     - Name: Image
+            #   RunOrder: 1
 
             - Name: Code
               ActionTypeId:
@@ -177,6 +177,21 @@ Resources:
               OutputArtifacts:
                 - Name: Code
               RunOrder: 1
+
+        - Name: Build
+          Actions:
+            - Name: Build
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Ref CodeBuildProject
+              InputArtifacts:
+                - Name: Code
+              OutputArtifacts:
+                - Name: Image
 
         #-----------------------------------------------------------------------------#
         # Deploy
@@ -197,7 +212,7 @@ Resources:
                 # Need a build stage to build images or transform imageDetail.json
                 # as described here: https://stackoverflow.com/a/57015190
                 # Or use blue/green deployment
-                FileName: imageDetail.json
+                FileName: imagedefinitions.json
               InputArtifacts:
                 - Name: Image
 
@@ -270,25 +285,25 @@ Resources:
   #-----------------------------------------------------------------------------#
   # Role for CloudWatch service
   #-----------------------------------------------------------------------------#
-  CloudWatchEventRole:
-    Type: AWS::IAM::Role
-    Properties:
-      Path: /
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: events.amazonaws.com
-            Action: sts:AssumeRole
-      Policies:
-        - PolicyName: cwe-pipeline-execution
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Effect: Allow
-                Action: codepipeline:StartPipelineExecution
-                Resource: !Sub arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:${Pipeline}
+  # CloudWatchEventRole:
+  #   Type: AWS::IAM::Role
+  #   Properties:
+  #     Path: /
+  #     AssumeRolePolicyDocument:
+  #       Version: 2012-10-17
+  #       Statement:
+  #         - Effect: Allow
+  #           Principal:
+  #             Service: events.amazonaws.com
+  #           Action: sts:AssumeRole
+  #     Policies:
+  #       - PolicyName: cwe-pipeline-execution
+  #         PolicyDocument:
+  #           Version: 2012-10-17
+  #           Statement:
+  #             - Effect: Allow
+  #               Action: codepipeline:StartPipelineExecution
+  #               Resource: !Sub arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:${Pipeline}
 
 Outputs:
   PipelineUrl:

@@ -23,7 +23,7 @@ Parameters:
     Description: How much memory in megabytes to give the container
   DesiredCount:
     Type: Number
-    Default: 2
+    Default: 1
     Description: How many copies of the service task to run
   Role:
     Type: String

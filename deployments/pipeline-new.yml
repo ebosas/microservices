@@ -83,6 +83,7 @@ Resources:
                 Repo: !Ref GitHubRepo
                 Branch: !Ref GitHubBranch
                 OAuthToken: !Ref GitHubToken
+                PollForSourceChanges: false
               OutputArtifacts:
                 - Name: Source
               RunOrder: 1
@@ -179,47 +180,47 @@ Resources:
         - Name: Services
           Actions:
 
-            - Name: Server
-              ActionTypeId:
-                Category: Deploy
-                Owner: AWS
-                Version: 1
-                Provider: CloudFormation
-              Configuration:
-                ActionMode: CREATE_UPDATE
-                RoleArn: !GetAtt CloudFormationDeployRole.Arn
-                StackName: !Sub ${EnvironmentName}-Service-Server
-                TemplatePath: !Sub Source::deployments/services-${DeploymentType}/server.yml
-                Capabilities: CAPABILITY_IAM
-                ParameterOverrides: !Sub |
-                  {
-                    "EnvironmentName": "${EnvironmentName}",
-                    "ServiceName": "server",
-                    "ImageUrl": "amazon/amazon-ecs-sample"
-                  }
-              InputArtifacts:
-                - Name: Source
+            # - Name: Server
+            #   ActionTypeId:
+            #     Category: Deploy
+            #     Owner: AWS
+            #     Version: 1
+            #     Provider: CloudFormation
+            #   Configuration:
+            #     ActionMode: CREATE_UPDATE
+            #     RoleArn: !GetAtt CloudFormationDeployRole.Arn
+            #     StackName: !Sub ${EnvironmentName}-Service-Server
+            #     TemplatePath: !Sub Source::deployments/services-${DeploymentType}/server.yml
+            #     Capabilities: CAPABILITY_IAM
+            #     ParameterOverrides: !Sub |
+            #       {
+            #         "EnvironmentName": "${EnvironmentName}",
+            #         "ServiceName": "server",
+            #         "ImageUrl": "amazon/amazon-ecs-sample"
+            #       }
+            #   InputArtifacts:
+            #     - Name: Source
 
-            - Name: Cache
-              ActionTypeId:
-                Category: Deploy
-                Owner: AWS
-                Version: 1
-                Provider: CloudFormation
-              Configuration:
-                ActionMode: CREATE_UPDATE
-                RoleArn: !GetAtt CloudFormationDeployRole.Arn
-                StackName: !Sub ${EnvironmentName}-Service-Cache
-                TemplatePath: !Sub Source::deployments/services-${DeploymentType}/cache.yml
-                Capabilities: CAPABILITY_IAM
-                ParameterOverrides: !Sub |
-                  {
-                    "EnvironmentName": "${EnvironmentName}",
-                    "ServiceName": "cache",
-                    "ImageUrl": "amazon/amazon-ecs-sample"
-                  }
-              InputArtifacts:
-                - Name: Source
+            # - Name: Cache
+            #   ActionTypeId:
+            #     Category: Deploy
+            #     Owner: AWS
+            #     Version: 1
+            #     Provider: CloudFormation
+            #   Configuration:
+            #     ActionMode: CREATE_UPDATE
+            #     RoleArn: !GetAtt CloudFormationDeployRole.Arn
+            #     StackName: !Sub ${EnvironmentName}-Service-Cache
+            #     TemplatePath: !Sub Source::deployments/services-${DeploymentType}/cache.yml
+            #     Capabilities: CAPABILITY_IAM
+            #     ParameterOverrides: !Sub |
+            #       {
+            #         "EnvironmentName": "${EnvironmentName}",
+            #         "ServiceName": "cache",
+            #         "ImageUrl": "amazon/amazon-ecs-sample"
+            #       }
+            #   InputArtifacts:
+            #     - Name: Source
 
             - Name: Database
               ActionTypeId:
@@ -249,57 +250,57 @@ Resources:
         - Name: Service_Pipelines
           Actions:
 
-            - Name: Server
-              ActionTypeId:
-                Category: Deploy
-                Owner: AWS
-                Version: 1
-                Provider: CloudFormation
-              Configuration:
-                ActionMode: CREATE_UPDATE
-                RoleArn: !GetAtt CloudFormationDeployRole.Arn
-                StackName: !Sub ${EnvironmentName}-Pipeline-Server
-                TemplatePath: Source::deployments/pipeline-service.yml
-                Capabilities: CAPABILITY_IAM
-                ParameterOverrides: !Sub |
-                  {
-                    "ServiceName": "server",
-                    "EnvironmentName": "${EnvironmentName}",
-                    "DeploymentType": "${DeploymentType}",
-                    "TriggerMessagePattern": "[(BuildServer|BuildAll)]",
-                    "GitHubRepo": "${GitHubRepo}",
-                    "GitHubBranch": "${GitHubBranch}",
-                    "GitHubToken": "${GitHubToken}",
-                    "GitHubUser": "${GitHubUser}"
-                  }
-              InputArtifacts:
-                - Name: Source
+            # - Name: Server
+            #   ActionTypeId:
+            #     Category: Deploy
+            #     Owner: AWS
+            #     Version: 1
+            #     Provider: CloudFormation
+            #   Configuration:
+            #     ActionMode: CREATE_UPDATE
+            #     RoleArn: !GetAtt CloudFormationDeployRole.Arn
+            #     StackName: !Sub ${EnvironmentName}-Pipeline-Server
+            #     TemplatePath: Source::deployments/pipeline-service.yml
+            #     Capabilities: CAPABILITY_IAM
+            #     ParameterOverrides: !Sub |
+            #       {
+            #         "ServiceName": "server",
+            #         "EnvironmentName": "${EnvironmentName}",
+            #         "DeploymentType": "${DeploymentType}",
+            #         "TriggerMessagePattern": "[(BuildServer|BuildAll)]",
+            #         "GitHubRepo": "${GitHubRepo}",
+            #         "GitHubBranch": "${GitHubBranch}",
+            #         "GitHubToken": "${GitHubToken}",
+            #         "GitHubUser": "${GitHubUser}"
+            #       }
+            #   InputArtifacts:
+            #     - Name: Source
 
-            - Name: Cache
-              ActionTypeId:
-                Category: Deploy
-                Owner: AWS
-                Version: 1
-                Provider: CloudFormation
-              Configuration:
-                ActionMode: CREATE_UPDATE
-                RoleArn: !GetAtt CloudFormationDeployRole.Arn
-                StackName: !Sub ${EnvironmentName}-Pipeline-Cache
-                TemplatePath: Source::deployments/pipeline-service.yml
-                Capabilities: CAPABILITY_IAM
-                ParameterOverrides: !Sub |
-                  {
-                    "ServiceName": "cache",
-                    "EnvironmentName": "${EnvironmentName}",
-                    "DeploymentType": "${DeploymentType}",
-                    "TriggerMessagePattern": "[(BuildCache|BuildAll)]",
-                    "GitHubRepo": "${GitHubRepo}",
-                    "GitHubBranch": "${GitHubBranch}",
-                    "GitHubToken": "${GitHubToken}",
-                    "GitHubUser": "${GitHubUser}"
-                  }
-              InputArtifacts:
-                - Name: Source
+            # - Name: Cache
+            #   ActionTypeId:
+            #     Category: Deploy
+            #     Owner: AWS
+            #     Version: 1
+            #     Provider: CloudFormation
+            #   Configuration:
+            #     ActionMode: CREATE_UPDATE
+            #     RoleArn: !GetAtt CloudFormationDeployRole.Arn
+            #     StackName: !Sub ${EnvironmentName}-Pipeline-Cache
+            #     TemplatePath: Source::deployments/pipeline-service.yml
+            #     Capabilities: CAPABILITY_IAM
+            #     ParameterOverrides: !Sub |
+            #       {
+            #         "ServiceName": "cache",
+            #         "EnvironmentName": "${EnvironmentName}",
+            #         "DeploymentType": "${DeploymentType}",
+            #         "TriggerMessagePattern": "[(BuildCache|BuildAll)]",
+            #         "GitHubRepo": "${GitHubRepo}",
+            #         "GitHubBranch": "${GitHubBranch}",
+            #         "GitHubToken": "${GitHubToken}",
+            #         "GitHubUser": "${GitHubUser}"
+            #       }
+            #   InputArtifacts:
+            #     - Name: Source
 
             - Name: Database
               ActionTypeId:
