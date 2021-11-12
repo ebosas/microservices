@@ -116,7 +116,7 @@ Resources:
           requestParameters:
             bucketName: [!Ref ArtifactBucket]
             key:
-              - !Sub imagedefinitions/${ServiceName}.json
+              - !Sub imagedefinitions/${ServiceName}.zip
         detail-type: [AWS API Call via CloudTrail]
         source: [aws.s3]
       Targets:
@@ -175,7 +175,7 @@ Resources:
                 Provider: S3
               Configuration:
                 S3Bucket: !Ref ArtifactBucket
-                S3ObjectKey: !Sub imagedefinitions/${ServiceName}.json
+                S3ObjectKey: !Sub imagedefinitions/${ServiceName}.zip
                 PollForSourceChanges: false
               OutputArtifacts:
                 - Name: Image
