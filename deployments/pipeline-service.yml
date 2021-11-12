@@ -309,6 +309,7 @@ Resources:
                 Action: codepipeline:StartPipelineExecution
                 Resource: !Sub arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:${Pipeline}
 
+
   #-----------------------------------------------------------------------------#
   # Role for CodePipeline service
   #-----------------------------------------------------------------------------#
