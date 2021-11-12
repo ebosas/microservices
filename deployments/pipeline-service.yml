@@ -53,7 +53,6 @@ Resources:
   #     ServerType: GITHUB
   #     AuthType: PERSONAL_ACCESS_TOKEN
 
-
   CodeBuildProject:
     Type: AWS::CodeBuild::Project
     # DependsOn: SourceCredentials
