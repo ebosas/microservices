@@ -118,6 +118,7 @@ Resources:
   #       - Arn: !Sub arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:${Pipeline}
   #         RoleArn: !GetAtt CloudWatchEventRole.Arn
   #         Id: server-pipeline
+  
 
   PipelineWebhook: 
     Type: AWS::CodePipeline::Webhook
