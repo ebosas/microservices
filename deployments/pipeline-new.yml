@@ -60,7 +60,7 @@ Resources:
     DependsOn:
       - SSMArtifactBucket
       - SSMCodePipelineServiceRoleArn
-      - SSMCloudFormationDeployRole
+      # - SSMCloudFormationDeployRole
     Properties:
       RoleArn: !GetAtt CodePipelineServiceRole.Arn
       ArtifactStore:
@@ -179,8 +179,8 @@ Resources:
         #-----------------------------------------------------------------------------#
         # Services
         #-----------------------------------------------------------------------------#
-        # - Name: Services
-        #   Actions:
+        - Name: Services
+          Actions:
 
             # - Name: Server
             #   ActionTypeId:
@@ -196,8 +196,8 @@ Resources:
             #     Capabilities: CAPABILITY_IAM
             #     ParameterOverrides: !Sub |
             #       {
-            #         "EnvironmentName": "${EnvironmentName}",
             #         "ServiceName": "server",
+            #         "EnvironmentName": "${EnvironmentName}",
             #         "ImageUrl": "amazon/amazon-ecs-sample"
             #       }
             #   InputArtifacts:
@@ -217,33 +217,35 @@ Resources:
             #     Capabilities: CAPABILITY_IAM
             #     ParameterOverrides: !Sub |
             #       {
-            #         "EnvironmentName": "${EnvironmentName}",
             #         "ServiceName": "cache",
+            #         "EnvironmentName": "${EnvironmentName}",
             #         "ImageUrl": "amazon/amazon-ecs-sample"
             #       }
             #   InputArtifacts:
             #     - Name: Source
 
-            # - Name: Database
-            #   ActionTypeId:
-            #     Category: Deploy
-            #     Owner: AWS
-            #     Version: 1
-            #     Provider: CloudFormation
-            #   Configuration:
-            #     ActionMode: CREATE_UPDATE
-            #     RoleArn: !GetAtt CloudFormationDeployRole.Arn
-            #     StackName: !Sub ${EnvironmentName}-Database-Service
-            #     TemplatePath: !Sub Source::deployments/services-${DeploymentType}/database.yml
-            #     Capabilities: CAPABILITY_IAM
-            #     ParameterOverrides: !Sub |
-            #       {
-            #         "EnvironmentName": "${EnvironmentName}",
-            #         "ServiceName": "database",
-            #         "ImageUrl": "amazon/amazon-ecs-sample"
-            #       }
-            #   InputArtifacts:
-            #     - Name: Source
+            - Name: Database
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                RoleArn: !GetAtt CloudFormationDeployRole.Arn
+                StackName: !Sub ${EnvironmentName}-Database-Service
+                TemplatePath: !Sub Source::deployments/services-${DeploymentType}/database.yml
+                Capabilities: CAPABILITY_IAM
+                # Don't have an image at this point, using a sample image
+                ParameterOverrides: !Sub |
+                  {
+                    "ServiceName": "database",
+                    "EnvironmentName": "${EnvironmentName}",
+                    "DeploymentType": "${DeploymentType}",
+                    "ImageUrl": "amazon/amazon-ecs-sample"
+                  }
+              InputArtifacts:
+                - Name: Source
 
 
         #-----------------------------------------------------------------------------#
@@ -266,8 +268,8 @@ Resources:
             #     Capabilities: CAPABILITY_IAM
             #     ParameterOverrides: !Sub |
             #       {
-            #         "ServiceName": "server",
             #         "EnvironmentName": "${EnvironmentName}",
+            #         "ServiceName": "server",
             #         "DeploymentType": "${DeploymentType}",
             #         "TriggerMessagePattern": "[(BuildServer|BuildAll)]",
             #         "GitHubRepo": "${GitHubRepo}",
@@ -292,8 +294,8 @@ Resources:
             #     Capabilities: CAPABILITY_IAM
             #     ParameterOverrides: !Sub |
             #       {
-            #         "ServiceName": "cache",
             #         "EnvironmentName": "${EnvironmentName}",
+            #         "ServiceName": "cache",
             #         "DeploymentType": "${DeploymentType}",
             #         "TriggerMessagePattern": "[(BuildCache|BuildAll)]",
             #         "GitHubRepo": "${GitHubRepo}",
@@ -318,8 +320,8 @@ Resources:
                 Capabilities: CAPABILITY_IAM
                 ParameterOverrides: !Sub |
                   {
-                    "ServiceName": "database",
                     "EnvironmentName": "${EnvironmentName}",
+                    "ServiceName": "database",
                     "DeploymentType": "${DeploymentType}",
                     "TriggerMessagePattern": "[(BuildDatabase|BuildAll)]",
                     "GitHubRepo": "${GitHubRepo}",
@@ -462,12 +464,12 @@ Resources:
       Name: /microservices/codepipeline_service_role_arn
       Type: String
       Value: !GetAtt CodePipelineServiceRole.Arn
-  SSMCloudFormationDeployRole:
-    Type: AWS::SSM::Parameter
-    Properties:
-      Name: /microservices/cloudformation_deploy_role
-      Type: String
-      Value: !Ref CloudFormationDeployRole
+  # SSMCloudFormationDeployRole:
+  #   Type: AWS::SSM::Parameter
+  #   Properties:
+  #     Name: /microservices/cloudformation_deploy_role
+  #     Type: String
+  #     Value: !Ref CloudFormationDeployRole
 
 Outputs:
   PipelineUrl:

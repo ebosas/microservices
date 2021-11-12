@@ -29,9 +29,9 @@ Parameters:
   CodePipelineServiceRoleArn:
     Type: AWS::SSM::Parameter::Value<String>
     Default: /microservices/codepipeline_service_role_arn
-  CloudFormationDeployRole:
-    Type: AWS::SSM::Parameter::Value<String>
-    Default: /microservices/cloudformation_deploy_role
+  # CloudFormationDeployRole:
+  #   Type: AWS::SSM::Parameter::Value<String>
+  #   Default: /microservices/cloudformation_deploy_role
 
 Resources:
 
@@ -106,17 +106,32 @@ Resources:
   #-----------------------------------------------------------------------------#
   # CodePipeline
   #-----------------------------------------------------------------------------#
+  # CloudWatchEventRule:
+  #   Type: AWS::Events::Rule
+  #   Properties:
+  #     EventPattern:
+  #       detail:
+  #         action-type: [PUSH]
+  #         image-tag: [latest]
+  #         repository-name: [!Ref Repository]
+  #         result: [SUCCESS]
+  #       detail-type: [ECR Image Action]
+  #       source: [aws.ecr]
+  #     Targets:
+  #       - Arn: !Sub arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:${Pipeline}
+  #         RoleArn: !GetAtt CloudWatchEventRole.Arn
+  #         Id: server-pipeline
+
+  # https://docs.aws.amazon.com/codebuild/latest/userguide/sample-build-notifications.html#sample-build-notifications-ref
   CloudWatchEventRule:
     Type: AWS::Events::Rule
     Properties:
       EventPattern:
+        detail-type: [CodeBuild Build State Change]
+        source: [aws.codebuild]
         detail:
-          action-type: [PUSH]
-          image-tag: [latest]
-          repository-name: [!Ref Repository]
-          result: [SUCCESS]
-        detail-type: [ECR Image Action]
-        source: [aws.ecr]
+          build-status: [SUCCEEDED]
+          project-name: [!Ref CodeBuildProject]
       Targets:
         - Arn: !Sub arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:${Pipeline}
           RoleArn: !GetAtt CloudWatchEventRole.Arn
@@ -151,33 +166,33 @@ Resources:
         - Name: Source
           Actions:
 
-            - Name: Image
-              Namespace: ImageVariables
-              ActionTypeId:
-                Category: Source
-                Owner: AWS
-                Version: 1
-                Provider: ECR
-              Configuration:
-                RepositoryName: !Ref Repository
-                ImageTag: latest
-              OutputArtifacts:
-                - Name: Image
-              RunOrder: 1
-
             # - Name: Image
+            #   Namespace: ImageVariables
             #   ActionTypeId:
             #     Category: Source
             #     Owner: AWS
             #     Version: 1
-            #     Provider: S3
+            #     Provider: ECR
             #   Configuration:
-            #     S3Bucket: !Ref ArtifactBucket
-            #     S3ObjectKey: !Sub imagedefinitions/${ServiceName}.zip
-            #     PollForSourceChanges: false
+            #     RepositoryName: !Ref Repository
+            #     ImageTag: latest
             #   OutputArtifacts:
             #     - Name: Image
             #   RunOrder: 1
+
+            - Name: Image
+              ActionTypeId:
+                Category: Source
+                Owner: AWS
+                Version: 1
+                Provider: S3
+              Configuration:
+                S3Bucket: !Ref ArtifactBucket
+                S3ObjectKey: !Sub imagedefinitions/${ServiceName}.zip
+                PollForSourceChanges: false
+              OutputArtifacts:
+                - Name: Image
+              RunOrder: 1
 
             - Name: Code
               ActionTypeId:
@@ -193,31 +208,10 @@ Resources:
                 PollForSourceChanges: false
               OutputArtifacts:
                 - Name: Code
-              RunOrder: 1
 
         #-----------------------------------------------------------------------------#
         # Deploy
         #-----------------------------------------------------------------------------#
-        # - Name: Deploy
-        #   Actions:
-        #     - Name: Deploy
-        #       ActionTypeId:
-        #         Category: Deploy
-        #         Owner: AWS
-        #         Version: 1
-        #         Provider: ECS
-        #       Configuration:
-        #         ClusterName:
-        #           Fn::ImportValue: !Sub ${EnvironmentName}:ClusterName
-        #         ServiceName: !Ref ServiceName
-        #         # Needs imagedefinitions.json but ECR produces imageDetail.json.
-        #         # Need a build stage to build images or transform imageDetail.json
-        #         # as described here: https://stackoverflow.com/a/57015190
-        #         # Or use blue/green deployment
-        #         FileName: imagedefinitions.json
-        #       InputArtifacts:
-        #         - Name: Image
-
         - Name: Deploy
           Actions:
             - Name: Deploy
@@ -225,22 +219,38 @@ Resources:
                 Category: Deploy
                 Owner: AWS
                 Version: 1
-                Provider: CloudFormation
+                Provider: ECS
               Configuration:
-                ActionMode: CREATE_UPDATE
-                RoleArn: !Ref CloudFormationDeployRole
-                StackName: !Sub ${EnvironmentName}-Server-Service
-                TemplatePath: !Sub Code::deployments/services-${DeploymentType}/server.yml
-                Capabilities: CAPABILITY_IAM
-                ParameterOverrides: !Sub |
-                  {
-                    "EnvironmentName": "${EnvironmentName}",
-                    "ServiceName": "${ServiceName}",
-                    "ImageUrl": "${Repository.RepositoryUri}@#{ImageVariables.ImageDigest}"
-                  }
+                ClusterName:
+                  Fn::ImportValue: !Sub ${EnvironmentName}:ClusterName
+                ServiceName: !Ref ServiceName
+                FileName: imagedefinitions.json
               InputArtifacts:
                 - Name: Image
-                - Name: Code
+
+        # - Name: Deploy
+        #   Actions:
+        #     - Name: Deploy
+        #       ActionTypeId:
+        #         Category: Deploy
+        #         Owner: AWS
+        #         Version: 1
+        #         Provider: CloudFormation
+        #       Configuration:
+        #         ActionMode: CREATE_UPDATE
+        #         RoleArn: !Ref CloudFormationDeployRole
+        #         StackName: !Sub ${EnvironmentName}-Server-Service
+        #         TemplatePath: !Sub Code::deployments/services-${DeploymentType}/server.yml
+        #         Capabilities: CAPABILITY_IAM
+        #         ParameterOverrides: !Sub |
+        #           {
+        #             "EnvironmentName": "${EnvironmentName}",
+        #             "ServiceName": "${ServiceName}",
+        #             "ImageUrl": "${Repository.RepositoryUri}@#{ImageVariables.ImageDigest}"
+        #           }
+        #       InputArtifacts:
+        #         - Name: Image
+        #         - Name: Code
 
   #-----------------------------------------------------------------------------#
   # Role for CodeBuild service
@@ -268,13 +278,13 @@ Resources:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
                   - ecr:GetAuthorizationToken
-              - Resource: !Sub arn:aws:s3:::${ArtifactBucket}/*
+              - Resource: !Sub arn:aws:s3:::${ArtifactBucket}*
                 Effect: Allow
                 Action:
                   - s3:GetObject
                   - s3:PutObject
                   - s3:GetObjectVersion
-              - Resource: "*" # !GetAtt Repository.Arn
+              - Resource: !GetAtt Repository.Arn
                 Effect: Allow
                 Action:
                   - ecr:GetDownloadUrlForLayer
