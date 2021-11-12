@@ -112,7 +112,10 @@ Resources:
       EventPattern:
         detail:
           eventSource: [s3.amazonaws.com]
-          eventName: [PutObject]
+          eventName:
+            - CopyObject
+            - CompleteMultipartUpload
+            - PutObject
           requestParameters:
             bucketName: [!Ref ArtifactBucket]
             key:
