@@ -25,6 +25,8 @@ Resources:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: !Sub microservices-${EnvironmentName}-${AWS::AccountId}
+      VersioningConfiguration: 
+        Status: Enabled
 
   #-----------------------------------------------------------------------------#
   # Source Credentials (for CodeBuild)
@@ -430,6 +432,7 @@ Resources:
                   - "ecr:*"
                   - "codepipeline:*"
                   - "events:*"
+                  - "ecs:*"
                 Resource: "*"
 
   #-----------------------------------------------------------------------------#
