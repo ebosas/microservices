@@ -141,19 +141,19 @@ Resources:
           RoleArn: !GetAtt CloudWatchEventRole.Arn
           Id: server-pipeline
 
-  PipelineWebhook: 
-    Type: AWS::CodePipeline::Webhook
-    Properties:
-      AuthenticationConfiguration:
-        SecretToken: !Ref GitHubToken
-      Filters:
-        - JsonPath: "$.ref"
-          MatchEquals: refs/heads/{Branch}
-      Authentication: GITHUB_HMAC
-      TargetPipeline: !Ref Pipeline
-      TargetAction: Code
-      TargetPipelineVersion: !GetAtt Pipeline.Version
-      RegisterWithThirdParty: false # only manual action
+  # PipelineWebhook: 
+  #   Type: AWS::CodePipeline::Webhook
+  #   Properties:
+  #     AuthenticationConfiguration:
+  #       SecretToken: !Ref GitHubToken
+  #     Filters:
+  #       - JsonPath: "$.ref"
+  #         MatchEquals: refs/heads/{Branch}
+  #     Authentication: GITHUB_HMAC
+  #     TargetPipeline: !Ref Pipeline
+  #     TargetAction: Code
+  #     TargetPipelineVersion: !GetAtt Pipeline.Version
+  #     RegisterWithThirdParty: false # only manual action
 
   Pipeline:
     Type: AWS::CodePipeline::Pipeline
@@ -198,20 +198,20 @@ Resources:
                 - Name: Image
               RunOrder: 1
 
-            - Name: Code
-              ActionTypeId:
-                Category: Source
-                Owner: ThirdParty
-                Version: 1
-                Provider: GitHub
-              Configuration:
-                Owner: !Ref GitHubUser
-                Repo: !Ref GitHubRepo
-                Branch: !Ref GitHubBranch
-                OAuthToken: !Ref GitHubToken
-                PollForSourceChanges: false
-              OutputArtifacts:
-                - Name: Code
+            # - Name: Code
+            #   ActionTypeId:
+            #     Category: Source
+            #     Owner: ThirdParty
+            #     Version: 1
+            #     Provider: GitHub
+            #   Configuration:
+            #     Owner: !Ref GitHubUser
+            #     Repo: !Ref GitHubRepo
+            #     Branch: !Ref GitHubBranch
+            #     OAuthToken: !Ref GitHubToken
+            #     PollForSourceChanges: false
+            #   OutputArtifacts:
+            #     - Name: Code
 
         #-----------------------------------------------------------------------------#
         # Deploy
