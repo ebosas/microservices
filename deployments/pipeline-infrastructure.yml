@@ -37,14 +37,15 @@ Resources:
             Statement:
               # Allow codepipeline to put artifacts in the S3 bucket
               # as well as get artifacts back out of it.
-              - Resource:
-                  - !Sub arn:aws:s3:::${ArtifactBucket}/*
+              - Resource: "*"
+                  # - !Sub arn:aws:s3:::${ArtifactBucket}/*
                 Effect: Allow
                 Action:
                   - s3:PutObject
                   - s3:GetObject
                   - s3:GetObjectVersion
                   - s3:GetBucketVersioning
+                  - s3:*
               # Allow codepipeline to build code builds
               - Resource: "*"
                 Effect: Allow

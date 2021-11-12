@@ -116,7 +116,7 @@ Resources:
           requestParameters:
             bucketName: [!Ref ArtifactBucket]
             key:
-              - !Sub ${ServiceName}/imagedefinitions.json
+              - !Sub imagedefinitions/${ServiceName}.json
         detail-type: [AWS API Call via CloudTrail]
         source: [aws.s3]
       Targets:
@@ -141,7 +141,7 @@ Resources:
   Pipeline:
     Type: AWS::CodePipeline::Pipeline
     Properties:
-      RoleArn: !GetAtt CodePipelineServiceRole.Arn
+      RoleArn: !Ref CodePipelineServiceRoleArn
       ArtifactStore:
         Type: S3
         Location: !Ref ArtifactBucket
@@ -175,7 +175,7 @@ Resources:
                 Provider: S3
               Configuration:
                 S3Bucket: !Ref ArtifactBucket
-                S3ObjectKey: !Sub ${ServiceName}/imagedefinitions.json
+                S3ObjectKey: !Sub imagedefinitions/${ServiceName}.json
                 PollForSourceChanges: false
               OutputArtifacts:
                 - Name: Image
@@ -308,73 +308,6 @@ Resources:
               - Effect: Allow
                 Action: codepipeline:StartPipelineExecution
                 Resource: !Sub arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:${Pipeline}
-
-
-  #-----------------------------------------------------------------------------#
-  # Role for CodePipeline service
-  #-----------------------------------------------------------------------------#
-  CodePipelineServiceRole:
-    Type: AWS::IAM::Role
-    Properties:
-      Path: /
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: codepipeline.amazonaws.com
-            Action: sts:AssumeRole
-      Policies:
-        - PolicyName: root
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              # Allow codepipeline to put artifacts in the S3 bucket
-              # as well as get artifacts back out of it.
-              - Resource: "*"
-                Effect: Allow
-                Action:
-                  - s3:PutObject
-                  - s3:GetObject
-                  - s3:GetObjectVersion
-                  - s3:GetBucketVersioning
-                  - s3:*
-              # Allow codepipeline to build code builds
-              - Resource: "*"
-                Effect: Allow
-                Action:
-                  - codebuild:StartBuild
-                  - codebuild:BatchGetBuilds
-                  - iam:PassRole
-              # Allow codepipeline to deploy cloudformation stacks
-              - Effect: Allow
-                Action:
-                  - cloudformation:CreateChangeSet
-                  - cloudformation:CreateStack
-                  - cloudformation:CreateUploadBucket
-                  - cloudformation:DeleteStack
-                  - cloudformation:Describe*
-                  - cloudformation:List*
-                  - cloudformation:UpdateStack
-                  - cloudformation:ValidateTemplate
-                  - cloudformation:ExecuteChangeSet
-                Resource: "*"
-              # Allow codepipeline to get images from ECR
-              - Effect: Allow
-                Action:
-                  - ecr:GetAuthorizationToken
-                  - ecr:BatchCheckLayerAvailability
-                  - ecr:GetDownloadUrlForLayer
-                  - ecr:GetRepositoryPolicy
-                  - ecr:DescribeRepositories
-                  - ecr:ListImages
-                  - ecr:DescribeImages
-                  - ecr:BatchGetImage
-                  - ecr:GetLifecyclePolicy
-                  - ecr:GetLifecyclePolicyPreview
-                  - ecr:ListTagsForResource
-                  - ecr:DescribeImageScanFindings
-                Resource: "*"
 
 Outputs:
   PipelineUrl:
