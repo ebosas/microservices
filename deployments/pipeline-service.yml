@@ -111,22 +111,6 @@ Resources:
   #-----------------------------------------------------------------------------#
   # CodePipeline
   #-----------------------------------------------------------------------------#
-  # CloudWatchEventRule:
-  #   Type: AWS::Events::Rule
-  #   Properties:
-  #     EventPattern:
-  #       detail:
-  #         action-type: [PUSH]
-  #         image-tag: [latest]
-  #         repository-name: [!Ref Repository]
-  #         result: [SUCCESS]
-  #       detail-type: [ECR Image Action]
-  #       source: [aws.ecr]
-  #     Targets:
-  #       - Arn: !Sub arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:${Pipeline}
-  #         RoleArn: !GetAtt CloudWatchEventRole.Arn
-  #         Id: server-pipeline
-
   CloudWatchEventRule:
     Type: AWS::Events::Rule
     Properties:
