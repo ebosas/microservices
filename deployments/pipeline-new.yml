@@ -241,7 +241,6 @@ Resources:
                   {
                     "ServiceName": "database",
                     "EnvironmentName": "${EnvironmentName}",
-                    "DeploymentType": "${DeploymentType}",
                     "ImageUrl": "amazon/amazon-ecs-sample"
                   }
               InputArtifacts:
