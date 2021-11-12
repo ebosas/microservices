@@ -322,7 +322,7 @@ Resources:
                     "EnvironmentName": "${EnvironmentName}",
                     "ServiceName": "database",
                     "DeploymentType": "${DeploymentType}",
-                    "TriggerMessagePattern": "[(BuildDatabase|BuildAll)]",
+                    "TriggerMessagePattern": "\\[(BuildDatabase|BuildAll)\\]",
                     "GitHubRepo": "${GitHubRepo}",
                     "GitHubBranch": "${GitHubBranch}",
                     "GitHubToken": "${GitHubToken}",

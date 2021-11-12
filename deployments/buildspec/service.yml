@@ -14,5 +14,6 @@ phases:
       - docker push $REPO_URI:latest
       - docker push $REPO_URI:$TAG
       - printf '[{"name":"%s","imageUri":"%s"}]' $SERVICE $REPO_URI:$TAG > imagedefinitions.json
-      - zip -r $SERVICE.zip imagedefinitions.json
-      - aws s3 cp $SERVICE.zip s3://$ARTIFACT_BUCKET/imagedefinitions/$SERVICE.zip
+artifacts:
+  files:
+    - imagedefinitions.json

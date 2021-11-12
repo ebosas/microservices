@@ -59,7 +59,12 @@ Resources:
     # DependsOn: SourceCredentials
     Properties:
       Artifacts:
-        Type: NO_ARTIFACTS
+        Type: S3
+        Location: !Ref ArtifactBucket
+        Path: imagedefinitions
+        Name: !Sub ${ServiceName}.zip
+        Packaging: ZIP
+        EncryptionDisabled: true
       Source:
         Type: GITHUB
         Location: !Sub https://github.com/${GitHubUser}/${GitHubRepo}.git
@@ -122,7 +127,6 @@ Resources:
   #         RoleArn: !GetAtt CloudWatchEventRole.Arn
   #         Id: server-pipeline
 
-  # https://docs.aws.amazon.com/codebuild/latest/userguide/sample-build-notifications.html#sample-build-notifications-ref
   CloudWatchEventRule:
     Type: AWS::Events::Rule
     Properties:
