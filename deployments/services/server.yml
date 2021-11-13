@@ -132,7 +132,6 @@ Resources:
         - ContainerName: !Ref 'ServiceName'
           ContainerPort: !Ref 'ContainerPort'
           TargetGroupArn: !Ref 'TargetGroup'
-
   EC2Service:
     Type: AWS::ECS::Service
     Condition: EC2

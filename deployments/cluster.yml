@@ -18,8 +18,10 @@ Parameters:
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
     Default: /aws/service/ecs/optimized-ami/amazon-linux-2/recommended/image_id
     Description: The Amazon Machine Image ID used for the EC2 cluster
+
 Conditions:
   EC2: !Equals [ !Ref LaunchType, 'EC2' ]
+  
 Resources:
 
   #-----------------------------------------------------------------------------#

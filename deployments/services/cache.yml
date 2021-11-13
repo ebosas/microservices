@@ -107,7 +107,6 @@ Resources:
             # Choose private subnets if using NAT gateways
             - Fn::ImportValue: !Sub ${EnvironmentName}:PublicSubnetOne
             - Fn::ImportValue: !Sub ${EnvironmentName}:PublicSubnetTwo
-
   EC2Service:
     Type: AWS::ECS::Service
     Condition: EC2

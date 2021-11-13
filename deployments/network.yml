@@ -184,9 +184,6 @@ Resources:
       GroupDescription: Access to the ECS hosts that run containers
       VpcId: !Ref 'VPC'
 
-# These are the values output by the CloudFormation template. Be careful
-# about changing any of them, because of them are exported with specific
-# names so that the other task related CF templates can use them.
 Outputs:
   VpcId:
     Description: The ID of the VPC that this stack is deployed in

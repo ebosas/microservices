@@ -4,7 +4,6 @@ Parameters:
   EnvironmentName:
     Type: String
     Default: production
-    Description: "A friendly environment name that will be used for namespacing all cluster resources. Example: staging, qa, or production"
   RabbitUsername:
     Type: String
     Default: rabbit
@@ -26,7 +25,10 @@ Parameters:
     AllowedPattern: "^[a-zA-Z0-9]{12,20}$"
     Description: The Postgres password
 Resources:
-  # A RabbitMQ broker
+
+  #-----------------------------------------------------------------------------#
+  # RabbitMQ Broker
+  #-----------------------------------------------------------------------------#
   RabbitMQ:
     Type: AWS::AmazonMQ::Broker
     Properties: 
@@ -43,6 +45,7 @@ Resources:
       Users: 
         - Password: !Ref RabbitPassword
           Username: !Ref RabbitUsername
+
   RabbitSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -56,7 +59,9 @@ Resources:
           FromPort: 5671
           ToPort: 5671
 
-  # A Redis cluster
+  #-----------------------------------------------------------------------------#
+  # Redis Cluster
+  #-----------------------------------------------------------------------------#
   Redis:
     Type: AWS::ElastiCache::CacheCluster
     DeletionPolicy: Delete
@@ -67,6 +72,7 @@ Resources:
       NumCacheNodes: 1
       CacheSubnetGroupName: !Ref RedisSubnetGroup
       VpcSecurityGroupIds: [!Ref RedisSecurityGroup]
+
   RedisSubnetGroup:
     Type: AWS::ElastiCache::SubnetGroup
     Properties:
@@ -74,6 +80,7 @@ Resources:
       SubnetIds:
         - Fn::ImportValue: !Sub ${EnvironmentName}:PrivateSubnetOne
         - Fn::ImportValue: !Sub ${EnvironmentName}:PrivateSubnetTwo
+
   RedisSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -87,7 +94,9 @@ Resources:
           FromPort: 6379
           ToPort: 6379
 
-  # A Postgres database
+  #-----------------------------------------------------------------------------#
+  # Postgres Database
+  #-----------------------------------------------------------------------------#
   Postgres:
     Type: AWS::RDS::DBInstance
     DeletionPolicy: Delete
@@ -106,6 +115,7 @@ Resources:
       PubliclyAccessible: false
       VPCSecurityGroups: [!Ref PostgresSecurityGroup]
       DBSubnetGroupName: !Ref PostgresSubnetGroup
+
   PostgresSubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
     Properties:
@@ -113,6 +123,7 @@ Resources:
       SubnetIds:
         - Fn::ImportValue: !Sub ${EnvironmentName}:PrivateSubnetOne
         - Fn::ImportValue: !Sub ${EnvironmentName}:PrivateSubnetTwo
+        
   PostgresSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -130,24 +141,15 @@ Resources:
         #   FromPort: 5432
         #   ToPort: 5432
 
-  # # An example showing how to use Secrets Manager to generate login credentials.
-  # # Refer in templates like this '{{resolve:secretsmanager:RabbitSecrets::password}}' 
-  # RabbitSecrets:
-  #   Type: AWS::SecretsManager::Secret
-  #   Properties:
-  #     Name: RabbitSecrets
-  #     Description: This secret has a dynamically generated password
-  #     GenerateSecretString:
-  #       SecretStringTemplate: '{"username": "rabbit"}'
-  #       GenerateStringKey: "password"
-  #       PasswordLength: 15
-  #       ExcludeCharacters: ',:='
+  #-----------------------------------------------------------------------------#
+  # SSM Parameter Store
+  #-----------------------------------------------------------------------------#
 
   # Connection strings for the resources created in this stack, will be passed to
   # services as environmental variables. This will expose passwords in SSM Parameter
   # Store as well as the ECS tasks definitions interface. Instead, use Secrets
   # Manager to generate passwords and retrieve directly in applicaton code as shown
-  # in the commented example above.
+  # in the commented example below.
   RabbitURLParameter:
     Type: AWS::SSM::Parameter
     Properties:
@@ -177,3 +179,16 @@ Resources:
       Type: String
       Description: A connection string for Redis
       Value: !Sub ${Redis.RedisEndpoint.Address}:${Redis.RedisEndpoint.Port}
+
+  # # An example showing how to use Secrets Manager to generate login credentials.
+  # # Refer in templates like this '{{resolve:secretsmanager:RabbitSecrets::password}}' 
+  # RabbitSecrets:
+  #   Type: AWS::SecretsManager::Secret
+  #   Properties:
+  #     Name: RabbitSecrets
+  #     Description: This secret has a dynamically generated password
+  #     GenerateSecretString:
+  #       SecretStringTemplate: '{"username": "rabbit"}'
+  #       GenerateStringKey: "password"
+  #       PasswordLength: 15
+  #       ExcludeCharacters: ',:='
