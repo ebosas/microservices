@@ -11,10 +11,10 @@ Parameters:
   EnvironmentName:
     Type: String
     Default: production
-  DeploymentType:
+  LaunchType:
     Type: String
     Default: fargate
-    AllowedValues: [ecs, fargate]
+    AllowedValues: [fargate, ec2]
 
 Resources:
 
@@ -234,7 +234,7 @@ Resources:
                 ActionMode: CREATE_UPDATE
                 RoleArn: !GetAtt CloudFormationDeployRole.Arn
                 StackName: !Sub ${EnvironmentName}-Cluster
-                TemplatePath: !Sub Source::deployments/cluster-${DeploymentType}.yml
+                TemplatePath: !Sub Source::deployments/cluster-${LaunchType}.yml
                 Capabilities: CAPABILITY_IAM
                 ParameterOverrides: !Sub |
                   {

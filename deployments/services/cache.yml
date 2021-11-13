@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Deploy a service on AWS Fargate, accessible via a public load balancer.
+Description: Deploy a service into a Fargate/ECS cluster behind a public load balancer.
 Parameters:
   EnvironmentName:
     Type: String
@@ -7,8 +7,12 @@ Parameters:
     Description: The name of the environment to add this service to
   ServiceName:
     Type: String
-    Default: database
+    Default: cache
     Description: A name for the service
+  LaunchType:
+    Type: String
+    Default: fargate
+    AllowedValues: [fargate, ec2]
   ImageUrl:
     Type: String
     Description: The url of a docker image that contains the application process that
@@ -28,11 +32,13 @@ Parameters:
   Role:
     Type: String
     Default: ""
-    Description: (Optional) An IAM role to give the service's containers if the code within needs to
-                 access other AWS resources like S3 buckets, DynamoDB tables, etc
+    Description: (Optional) An IAM role to give the service's containers if the code within
+                 needs to access other AWS resources like S3 buckets, DynamoDB tables, etc
 
 Conditions:
   HasCustomRole: !Not [ !Equals [!Ref 'Role', ''] ]
+  Fargate: !Equals [ !Ref LaunchType, 'fargate' ]
+  EC2: !Equals [ !Ref LaunchType, 'ec2' ]
 
 Resources:
   # A log group for storing the stdout logs from this service's containers
@@ -49,9 +55,9 @@ Resources:
       Family: !Ref 'ServiceName'
       Cpu: !Ref 'ContainerCpu'
       Memory: !Ref 'ContainerMemory'
-      NetworkMode: awsvpc
+      NetworkMode: !If [ Fargate, "awsvpc", "bridge" ]
       RequiresCompatibilities:
-        - FARGATE
+        - !If [ Fargate, "FARGATE", "EC2" ]
       ExecutionRoleArn:
         Fn::ImportValue: !Sub ${EnvironmentName}:ECSTaskExecutionRole
       TaskRoleArn:
@@ -63,7 +69,6 @@ Resources:
         - Name: !Ref 'ServiceName'
           Cpu: !Ref 'ContainerCpu'
           Memory: !Ref 'ContainerMemory'
-          # Image: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/microservices/${ServiceName}:latest
           Image: !Ref ImageUrl
           LogConfiguration:
             LogDriver: 'awslogs'
@@ -74,14 +79,15 @@ Resources:
           Environment:
             - Name: RABBIT_URL
               Value: '{{resolve:ssm:/Microservices/RabbitUrl}}'
-            - Name: POSTGRES_URL
-              Value: '{{resolve:ssm:/Microservices/PostgresUrl}}'
+            - Name: REDIS_URL
+              Value: '{{resolve:ssm:/Microservices/RedisUrl}}'
 
   # The service. The service is a resource which allows you to run multiple
   # copies of a type of task, and gather up their logs and metrics, as well
   # as monitor the number of running tasks and replace any that have crashed
-  Service:
+  FargateService:
     Type: AWS::ECS::Service
+    Condition: Fargate
     Properties:
       ServiceName: !Ref 'ServiceName'
       Cluster:
@@ -91,6 +97,7 @@ Resources:
         MaximumPercent: 200
         MinimumHealthyPercent: 75
       DesiredCount: !Ref 'DesiredCount'
+      TaskDefinition: !Ref 'TaskDefinition'
       NetworkConfiguration:
         AwsvpcConfiguration:
           AssignPublicIp: ENABLED
@@ -100,12 +107,26 @@ Resources:
             # Choose private subnets if using NAT gateways
             - Fn::ImportValue: !Sub ${EnvironmentName}:PublicSubnetOne
             - Fn::ImportValue: !Sub ${EnvironmentName}:PublicSubnetTwo
+
+  EC2Service:
+    Type: AWS::ECS::Service
+    Condition: EC2
+    Properties:
+      ServiceName: !Ref 'ServiceName'
+      Cluster:
+        Fn::ImportValue: !Sub ${EnvironmentName}:ClusterName
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 75
+      DesiredCount: !Ref 'DesiredCount'
       TaskDefinition: !Ref 'TaskDefinition'
+      PlacementStrategies:
+        - Field: memory
+          Type: binpack
 
   # Enable autoscaling for this service
   ScalableTarget:
     Type: AWS::ApplicationAutoScaling::ScalableTarget
-    DependsOn: Service
     Properties:
       ServiceNamespace: 'ecs'
       ScalableDimension: 'ecs:service:DesiredCount'
@@ -114,7 +135,7 @@ Resources:
           - '/'
           - - service
             - Fn::ImportValue: !Sub ${EnvironmentName}:ClusterName
-            - !Ref 'ServiceName'
+            - !If [ Fargate, !GetAtt FargateService.Name, !GetAtt EC2Service.Name ]
       MinCapacity: 1
       MaxCapacity: 10
       RoleARN:

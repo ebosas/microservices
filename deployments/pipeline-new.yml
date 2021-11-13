@@ -11,10 +11,10 @@ Parameters:
   EnvironmentName:
     Type: String
     Default: production
-  DeploymentType:
+  LaunchType:
     Type: String
     Default: fargate
-    AllowedValues: [ecs, fargate]
+    AllowedValues: [fargate, ec2]
 
 Resources:
 
@@ -166,7 +166,7 @@ Resources:
         #         ActionMode: CREATE_UPDATE
         #         RoleArn: !GetAtt CloudFormationDeployRole.Arn
         #         StackName: !Sub ${EnvironmentName}-Cluster
-        #         TemplatePath: !Sub Source::deployments/cluster-${DeploymentType}.yml
+        #         TemplatePath: !Sub Source::deployments/cluster-${LaunchType}.yml
         #         Capabilities: CAPABILITY_IAM
         #         ParameterOverrides: !Sub |
         #           {
@@ -191,12 +191,13 @@ Resources:
             #     ActionMode: CREATE_UPDATE
             #     RoleArn: !GetAtt CloudFormationDeployRole.Arn
             #     StackName: !Sub ${EnvironmentName}-Server-Service
-            #     TemplatePath: !Sub Source::deployments/services-${DeploymentType}/server.yml
+            #     TemplatePath: Source::deployments/services/server.yml
             #     Capabilities: CAPABILITY_IAM
             #     ParameterOverrides: !Sub |
             #       {
             #         "ServiceName": "server",
             #         "EnvironmentName": "${EnvironmentName}",
+            #         "LaunchType": "${LaunchType}",
             #         "ImageUrl": "amazon/amazon-ecs-sample"
             #       }
             #   InputArtifacts:
@@ -212,12 +213,13 @@ Resources:
             #     ActionMode: CREATE_UPDATE
             #     RoleArn: !GetAtt CloudFormationDeployRole.Arn
             #     StackName: !Sub ${EnvironmentName}-Cache-Service
-            #     TemplatePath: !Sub Source::deployments/services-${DeploymentType}/cache.yml
+            #     TemplatePath: Source::deployments/services/cache.yml
             #     Capabilities: CAPABILITY_IAM
             #     ParameterOverrides: !Sub |
             #       {
             #         "ServiceName": "cache",
             #         "EnvironmentName": "${EnvironmentName}",
+            #         "LaunchType": "${LaunchType}",
             #         "ImageUrl": "amazon/amazon-ecs-sample"
             #       }
             #   InputArtifacts:
@@ -233,13 +235,14 @@ Resources:
                 ActionMode: CREATE_UPDATE
                 RoleArn: !GetAtt CloudFormationDeployRole.Arn
                 StackName: !Sub ${EnvironmentName}-Database-Service
-                TemplatePath: !Sub Source::deployments/services-${DeploymentType}/database.yml
+                TemplatePath: Source::deployments/services/database.yml
                 Capabilities: CAPABILITY_IAM
-                # Don't have an image at this point, using a sample image
+                # Using a sample image at this point
                 ParameterOverrides: !Sub |
                   {
                     "ServiceName": "database",
                     "EnvironmentName": "${EnvironmentName}",
+                    "LaunchType": "${LaunchType}",
                     "ImageUrl": "amazon/amazon-ecs-sample"
                   }
               InputArtifacts:
@@ -262,7 +265,7 @@ Resources:
             #     ActionMode: CREATE_UPDATE
             #     RoleArn: !GetAtt CloudFormationDeployRole.Arn
             #     StackName: !Sub ${EnvironmentName}-Server-Pipeline
-            #     TemplatePath: Source::deployments/pipeline-service.yml
+            #     TemplatePath: Source::deployments/service-pipeline.yml
             #     Capabilities: CAPABILITY_IAM
             #     ParameterOverrides: !Sub |
             #       {
@@ -286,7 +289,7 @@ Resources:
             #     ActionMode: CREATE_UPDATE
             #     RoleArn: !GetAtt CloudFormationDeployRole.Arn
             #     StackName: !Sub ${EnvironmentName}-Cache-Pipeline
-            #     TemplatePath: Source::deployments/pipeline-service.yml
+            #     TemplatePath: Source::deployments/service-pipeline.yml
             #     Capabilities: CAPABILITY_IAM
             #     ParameterOverrides: !Sub |
             #       {
@@ -310,7 +313,7 @@ Resources:
                 ActionMode: CREATE_UPDATE
                 RoleArn: !GetAtt CloudFormationDeployRole.Arn
                 StackName: !Sub ${EnvironmentName}-Database-Pipeline
-                TemplatePath: Source::deployments/pipeline-service.yml
+                TemplatePath: Source::deployments/service-pipeline.yml
                 Capabilities: CAPABILITY_IAM
                 ParameterOverrides: !Sub |
                   {
@@ -441,18 +444,18 @@ Resources:
                 Resource: "*"
 
   #-----------------------------------------------------------------------------#
-  # Parameter Store
+  # SSM Parameter Store
   #-----------------------------------------------------------------------------#
   SSMArtifactBucket:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: /microservices/artifact_bucket
+      Name: /Microservices/ArtifactBucket
       Type: String
       Value: !Ref ArtifactBucket
   SSMCodePipelineServiceRoleArn:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: /microservices/codepipeline_service_role_arn
+      Name: /Microservices/CodePipelineServiceRoleArn
       Type: String
       Value: !GetAtt CodePipelineServiceRole.Arn
 

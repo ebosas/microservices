@@ -3,18 +3,11 @@ Parameters:
     Type: String
   GitHubBranch:
     Type: String
-  # GitHubToken:
-  #   Type: String
-  #   NoEcho: true
   GitHubUser:
     Type: String
   EnvironmentName:
     Type: String
     Default: production
-  # DeploymentType:
-  #   Type: String
-  #   Default: fargate
-  #   AllowedValues: [ecs, fargate]
   ServiceName:
     Type: String
     Description: The name of the service
@@ -25,10 +18,10 @@ Parameters:
     Default: \[BuildAll\]
   ArtifactBucket:
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /microservices/artifact_bucket
+    Default: /Microservices/ArtifactBucket
   CodePipelineServiceRoleArn:
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /microservices/codepipeline_service_role_arn
+    Default: /Microservices/CodePipelineServiceRoleArn
 
 Resources:
 
@@ -71,8 +64,6 @@ Resources:
             Value: !Ref ServiceName
           - Name: REPO_URI
             Value: !Sub ${Repository.RepositoryUri}
-          - Name: ARTIFACT_BUCKET
-            Value: !Ref ArtifactBucket
       Triggers:
         Webhook: true
         FilterGroups:
@@ -85,15 +76,6 @@ Resources:
           - Type: COMMIT_MESSAGE
             Pattern: !Ref TriggerPattern
             ExcludeMatchedPattern: false
-        # - - Type: EVENT
-        #     Pattern: PUSH
-        #     ExcludeMatchedPattern: false
-        #   - Type: HEAD_REF
-        #     Pattern: !Sub ^refs/heads/${GitHubBranch}$
-        #     ExcludeMatchedPattern: false
-        #   - Type: FILE_PATH
-        #     Pattern: ^(cmd/server/|internal/|web/|server.Dockerfile)
-        #     ExcludeMatchedPattern: false
       ServiceRole: !Ref CodeBuildServiceRole
       TimeoutInMinutes: 10
 
@@ -112,7 +94,7 @@ Resources:
       Targets:
         - Arn: !Sub arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:${Pipeline}
           RoleArn: !GetAtt CloudWatchEventRole.Arn
-          Id: server-pipeline
+          Id: !Sub ${ServiceName}-pipeline
 
   Pipeline:
     Type: AWS::CodePipeline::Pipeline

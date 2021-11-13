@@ -11,10 +11,10 @@ Parameters:
   EnvironmentName:
     Type: String
     Default: production
-  DeploymentType:
+  LaunchType:
     Type: String
     Default: fargate
-    AllowedValues: [ecs, fargate]
+    AllowedValues: [fargate, ec2]
 
 Resources:
   # Create ECR respositories to hold built docker images
@@ -314,7 +314,7 @@ Resources:
                 ActionMode: CREATE_UPDATE
                 RoleArn: !GetAtt CloudFormationDeployRole.Arn
                 StackName: !Sub ${EnvironmentName}-Cluster
-                TemplatePath: !Sub Source::deployments/cluster-${DeploymentType}.yml
+                TemplatePath: !Sub Source::deployments/cluster-${LaunchType}.yml
                 Capabilities: CAPABILITY_IAM
                 ParameterOverrides: !Sub |
                   {
@@ -384,11 +384,12 @@ Resources:
                 ActionMode: CREATE_UPDATE
                 RoleArn: !GetAtt CloudFormationDeployRole.Arn
                 StackName: !Sub ${EnvironmentName}-ServerService
-                TemplatePath: !Sub Source::deployments/services-${DeploymentType}/server.yml
+                TemplatePath: Source::deployments/services/server.yml
                 Capabilities: CAPABILITY_IAM
                 ParameterOverrides: !Sub |
                   {
                     "EnvironmentName": "${EnvironmentName}",
+                    "LaunchType": "${LaunchType}",
                     "ImageUrl": {
                       "Fn::GetParam" : ["BuildOutput", "build.json", "ImageServerUri"]
                     }
@@ -408,11 +409,12 @@ Resources:
                 ActionMode: CREATE_UPDATE
                 RoleArn: !GetAtt CloudFormationDeployRole.Arn
                 StackName: !Sub ${EnvironmentName}-CacheService
-                TemplatePath: !Sub Source::deployments/services-${DeploymentType}/cache.yml
+                TemplatePath: Source::deployments/services/cache.yml
                 Capabilities: CAPABILITY_IAM
                 ParameterOverrides: !Sub |
                   {
                     "EnvironmentName": "${EnvironmentName}",
+                    "LaunchType": "${LaunchType}",
                     "ImageUrl": {
                       "Fn::GetParam" : ["BuildOutput", "build.json", "ImageCacheUri"]
                     }
@@ -432,11 +434,12 @@ Resources:
                 ActionMode: CREATE_UPDATE
                 RoleArn: !GetAtt CloudFormationDeployRole.Arn
                 StackName: !Sub ${EnvironmentName}-DatabaseService
-                TemplatePath: !Sub Source::deployments/services-${DeploymentType}/database.yml
+                TemplatePath: Source::deployments/services/database.yml
                 Capabilities: CAPABILITY_IAM
                 ParameterOverrides: !Sub |
                   {
                     "EnvironmentName": "${EnvironmentName}",
+                    "LaunchType": "${LaunchType}",
                     "ImageUrl": {
                       "Fn::GetParam" : ["BuildOutput", "build.json", "ImageDatabaseUri"]
                     }
