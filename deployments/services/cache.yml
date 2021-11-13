@@ -11,8 +11,8 @@ Parameters:
     Description: A name for the service
   LaunchType:
     Type: String
-    Default: fargate
-    AllowedValues: [fargate, ec2]
+    Default: Fargate
+    AllowedValues: [Fargate, EC2]
   ImageUrl:
     Type: String
     Description: The url of a docker image that contains the application process that
@@ -37,8 +37,8 @@ Parameters:
 
 Conditions:
   HasCustomRole: !Not [ !Equals [!Ref 'Role', ''] ]
-  Fargate: !Equals [ !Ref LaunchType, 'fargate' ]
-  EC2: !Equals [ !Ref LaunchType, 'ec2' ]
+  Fargate: !Equals [ !Ref LaunchType, 'Fargate' ]
+  EC2: !Equals [ !Ref LaunchType, 'EC2' ]
 
 Resources:
   # A log group for storing the stdout logs from this service's containers
