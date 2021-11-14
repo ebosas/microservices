@@ -25,6 +25,45 @@ cd microservices
 docker-compose up
 ```
 
+## Deploy to Amazon ECS/AWS Fargate
+
+`cd deployments` and create the CI/CD pipeline stack. Once finished, visit the `ExternalUrl` available in the load balancer's Outputs tab in CloudFormation.
+
+```bash
+aws cloudformation deploy \
+    --stack-name Microservices \
+    --template-file pipeline.yml \
+    --parameter-overrides \
+        EnvironmentName=msprod \
+        LaunchType=Fargate \
+        GitHubRepo=<github_repo_name> \
+        GitHubBranch=<github_branch> \
+        GitHubToken=<github_token> \
+        GitHubUser=<github_user> \
+    --capabilities CAPABILITY_NAMED_IAM
+```
+
+### Github repo setup
+
+Fork this repo to have a copy in your Github account.
+
+Then, on the [Github access token page](https://github.com/settings/tokens), generate a new token with the following access:
+
+* `repo`
+* `admin:repo_hook`
+
+### Deleting stacks
+
+When deleting the ECS cluster stack (`cluster-ecs.yml`) in CloudFormation, the auto scaling group needs to be manually deleted. You can do it from the Auto Scaling Groups section in the AWS EC2 console.
+
+With capacity providers, container instances need to be protected from scale-in. This interferes with the automatic deletion process in CloudFormation. 
+
+### References
+
+Deployment is based on these templates: https://github.com/nathanpeck/ecs-cloudformation
+
+## Inspect local resources
+
 ### Database
 
 To inspect the database, launch a new container that will connect to our Postgres database. Then enter the password `demopsw` (see the `.env` file).
@@ -71,57 +110,6 @@ To access the back end service, attach to its docker container from a separate t
 ```bash
 docker attach microservices_backend
 ```
-
-## Deployment to Amazon ECS/AWS Fargate
-
-`cd deployments` and create the CI/CD pipeline stack. Once finished, visit the `ExternalUrl` available in the load balancer's Outputs tab in CloudFormation.
-
-```bash
-aws cloudformation deploy \
-    --stack-name Microservices \
-    --template-file pipeline.yml \
-    --parameter-overrides \
-        EnvironmentName=msprod \
-        LaunchType=Fargate \
-        GitHubRepo=<github_repo_name> \
-        GitHubBranch=<github_branch> \
-        GitHubToken=<github_token> \
-        GitHubUser=<github_user> \
-    --capabilities CAPABILITY_NAMED_IAM
-```
-
-```bash
-aws cloudformation create-stack \
-	--stack-name MicroservicesFargate \
-	--template-body file://pipeline.yml \
-	--parameters \
-		ParameterKey=DeploymentType,ParameterValue=fargate \
-		ParameterKey=EnvironmentName,ParameterValue=microservices-fargate \
-		ParameterKey=GitHubRepo,ParameterValue=<github_repo_name> \
-		ParameterKey=GitHubBranch,ParameterValue=<github_branch> \
-		ParameterKey=GitHubToken,ParameterValue=<github_token> \
-		ParameterKey=GitHubUser,ParameterValue=<github_user> \
-	--capabilities CAPABILITY_NAMED_IAM
-```
-
-### Github repo setup
-
-Fork this repo to have a copy in your Github account.
-
-Then, on the [Github access token page](https://github.com/settings/tokens), generate a new token with the following access:
-
-* `repo`
-* `admin:repo_hook`
-
-### Deleting stacks
-
-When deleting the ECS cluster stack (`cluster-ecs.yml`) in CloudFormation, the auto scaling group needs to be manually deleted. You can do it from the Auto Scaling Groups section in the AWS EC2 console.
-
-With capacity providers, container instances need to be protected from scale-in. This interferes with the automatic deletion process in CloudFormation. 
-
-### References
-
-Deployment is based on these templates: https://github.com/nathanpeck/ecs-cloudformation
 
 ## Local development
 

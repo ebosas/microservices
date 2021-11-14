@@ -50,20 +50,22 @@ Resources:
       DesiredCapacity: 1
     CreationPolicy:
       ResourceSignal:
-        Timeout: PT5M
+        Timeout: PT15M
     UpdatePolicy:
-      AutoScalingRollingUpdate:
-        MinSuccessfulInstancesPercent: 100
-        WaitOnResourceSignals: true
-        PauseTime: PT5M
-        SuspendProcesses:
-          # Suspend everything except Launch and Terminate.
-          - AddToLoadBalancer
-          - AlarmNotification
-          - AZRebalance
-          - HealthCheck
-          - ReplaceUnhealthy
-          - ScheduledActions
+      AutoScalingReplacingUpdate:
+        WillReplace: true
+      # AutoScalingRollingUpdate:
+      #   MinSuccessfulInstancesPercent: 100
+      #   WaitOnResourceSignals: true
+      #   PauseTime: PT5M
+      #   SuspendProcesses:
+      #     # Suspend everything except Launch and Terminate.
+      #     - AddToLoadBalancer
+      #     - AlarmNotification
+      #     - AZRebalance
+      #     - HealthCheck
+      #     - ReplaceUnhealthy
+      #     - ScheduledActions
 
   ContainerInstances:
     Type: AWS::AutoScaling::LaunchConfiguration
@@ -157,7 +159,8 @@ Resources:
           Action: [sts:AssumeRole]
       Path: /
       Policies:
-      - PolicyName: AmazonEC2ContainerServiceforEC2Role
+      # AmazonEC2ContainerServiceforEC2Role
+      - PolicyName: ecs-service
         PolicyDocument:
           Statement:
           - Effect: Allow
@@ -180,7 +183,7 @@ Resources:
             Resource: '*'
 
   #-----------------------------------------------------------------------------#
-  # Role ECS Tasks
+  # Role for ECS Tasks
   #-----------------------------------------------------------------------------#
   ECSTaskExecutionRole:
     Type: AWS::IAM::Role
@@ -209,44 +212,48 @@ Resources:
                 - logs:PutLogEvents
               Resource: '*'
 
-  # # This is an IAM role which authorizes ECS to manage resources on your
-  # # account on your behalf, such as updating your load balancer with the
-  # # details of where your containers are, so that traffic can reach your
-  # # containers.
-  # ECSRole:
-  #   Type: AWS::IAM::Role
-  #   Properties:
-  #     AssumeRolePolicyDocument:
-  #       Statement:
-  #       - Effect: Allow
-  #         Principal:
-  #           Service: [ecs.amazonaws.com]
-  #         Action: ['sts:AssumeRole']
-  #     Path: /
-  #     Policies:
-  #     - PolicyName: ecs-service
-  #       PolicyDocument:
-  #         Statement:
-  #         - Effect: Allow
-  #           Action:
-  #             # Rules which allow ECS to attach network interfaces to instances
-  #             # on your behalf in order for awsvpc networking mode to work right
-  #             - 'ec2:AttachNetworkInterface'
-  #             - 'ec2:CreateNetworkInterface'
-  #             - 'ec2:CreateNetworkInterfacePermission'
-  #             - 'ec2:DeleteNetworkInterface'
-  #             - 'ec2:DeleteNetworkInterfacePermission'
-  #             - 'ec2:Describe*'
-  #             - 'ec2:DetachNetworkInterface'
+  #-----------------------------------------------------------------------------#
+  # Role for ECS
+  #
+  # This is an IAM role which authorizes ECS to manage resources on your
+  # account on your behalf, such as updating your load balancer with the
+  # details of where your containers are, so that traffic can reach your
+  # containers.
+  #-----------------------------------------------------------------------------#
+  ECSRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [ecs.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Path: /
+      Policies:
+      - PolicyName: ecs-service
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action:
+              # Rules which allow ECS to attach network interfaces to instances
+              # on your behalf in order for awsvpc networking mode to work right
+              - 'ec2:AttachNetworkInterface'
+              - 'ec2:CreateNetworkInterface'
+              - 'ec2:CreateNetworkInterfacePermission'
+              - 'ec2:DeleteNetworkInterface'
+              - 'ec2:DeleteNetworkInterfacePermission'
+              - 'ec2:Describe*'
+              - 'ec2:DetachNetworkInterface'
 
-  #             # Rules which allow ECS to update load balancers on your behalf
-  #             # with the information sabout how to send traffic to your containers
-  #             - 'elasticloadbalancing:DeregisterInstancesFromLoadBalancer'
-  #             - 'elasticloadbalancing:DeregisterTargets'
-  #             - 'elasticloadbalancing:Describe*'
-  #             - 'elasticloadbalancing:RegisterInstancesWithLoadBalancer'
-  #             - 'elasticloadbalancing:RegisterTargets'
-  #           Resource: '*'
+              # Rules which allow ECS to update load balancers on your behalf
+              # with the information sabout how to send traffic to your containers
+              - 'elasticloadbalancing:DeregisterInstancesFromLoadBalancer'
+              - 'elasticloadbalancing:DeregisterTargets'
+              - 'elasticloadbalancing:Describe*'
+              - 'elasticloadbalancing:RegisterInstancesWithLoadBalancer'
+              - 'elasticloadbalancing:RegisterTargets'
+            Resource: '*'
 
 Outputs:
   ClusterName:
@@ -259,11 +266,11 @@ Outputs:
     Value: !GetAtt AutoscalingRole.Arn
     Export:
       Name: !Sub ${EnvironmentName}:AutoscalingRole
-  # ECSRole:
-  #   Description: The ARN of the ECS role
-  #   Value: !GetAtt 'ECSRole.Arn'
-  #   Export:
-  #     Name: !Sub ${EnvironmentName}:ECSRole
+  ECSRole:
+    Description: The ARN of the ECS role
+    Value: !GetAtt ECSRole.Arn
+    Export:
+      Name: !Sub ${EnvironmentName}:ECSRole
   ECSTaskExecutionRole:
     Description: The ARN of the ECS role
     Value: !GetAtt ECSTaskExecutionRole.Arn
