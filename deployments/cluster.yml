@@ -36,6 +36,7 @@ Resources:
   #-----------------------------------------------------------------------------#
   ECSAutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
+    DependsOn: ECSCluster
     Condition: EC2
     Properties:
       NewInstancesProtectedFromScaleIn: true
@@ -49,10 +50,20 @@ Resources:
       DesiredCapacity: 1
     CreationPolicy:
       ResourceSignal:
-        Timeout: PT15M
+        Timeout: PT5M
     UpdatePolicy:
-      AutoScalingReplacingUpdate:
-        WillReplace: true
+      AutoScalingRollingUpdate:
+        MinSuccessfulInstancesPercent: 100
+        WaitOnResourceSignals: true
+        PauseTime: PT5M
+        SuspendProcesses:
+          # Suspend everything except Launch and Terminate.
+          - AddToLoadBalancer
+          - AlarmNotification
+          - AZRebalance
+          - HealthCheck
+          - ReplaceUnhealthy
+          - ScheduledActions
 
   ContainerInstances:
     Type: AWS::AutoScaling::LaunchConfiguration
@@ -82,16 +93,17 @@ Resources:
   #-----------------------------------------------------------------------------#
   ECSCapacityProvider:
     Type: AWS::ECS::CapacityProvider
+    DependsOn: ECSCluster
     Condition: EC2
     Properties:
-        AutoScalingGroupProvider:
-            AutoScalingGroupArn: !Ref ECSAutoScalingGroup
-            ManagedScaling:
-                MaximumScalingStepSize: 2
-                MinimumScalingStepSize: 1
-                Status: ENABLED
-                TargetCapacity: 100
-            ManagedTerminationProtection: ENABLED
+      AutoScalingGroupProvider:
+        AutoScalingGroupArn: !Ref ECSAutoScalingGroup
+        ManagedScaling:
+          MaximumScalingStepSize: 2
+          MinimumScalingStepSize: 1
+          Status: ENABLED
+          TargetCapacity: 100
+        ManagedTerminationProtection: ENABLED
 
   ECSClusterCapProvAssoc:
     Type: AWS::ECS::ClusterCapacityProviderAssociations
