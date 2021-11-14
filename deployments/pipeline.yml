@@ -31,15 +31,15 @@ Resources:
       VersioningConfiguration: 
         Status: Enabled
 
-  # #-----------------------------------------------------------------------------#
-  # # Source Credentials (for CodeBuild)
-  # #-----------------------------------------------------------------------------#
-  # SourceCredentials:
-  #   Type: AWS::CodeBuild::SourceCredential
-  #   Properties:
-  #     Token: !Ref GitHubToken
-  #     ServerType: GITHUB
-  #     AuthType: PERSONAL_ACCESS_TOKEN
+  #-----------------------------------------------------------------------------#
+  # Source Credentials (for CodeBuild)
+  #-----------------------------------------------------------------------------#
+  SourceCredentials:
+    Type: AWS::CodeBuild::SourceCredential
+    Properties:
+      Token: !Ref GitHubToken
+      ServerType: GITHUB
+      AuthType: PERSONAL_ACCESS_TOKEN
 
   #-----------------------------------------------------------------------------#
   # CodePipeline
@@ -92,92 +92,92 @@ Resources:
                 - Name: Source
               RunOrder: 1
 
-        # #-----------------------------------------------------------------------------#
-        # # Infrastructure Resources
-        # #-----------------------------------------------------------------------------#
-        # - Name: Network_Resources
-        #   Actions:
-        #     - Name: Deploy
-        #       ActionTypeId:
-        #         Category: Deploy
-        #         Owner: AWS
-        #         Version: 1
-        #         Provider: CloudFormation
-        #       Configuration:
-        #         ActionMode: CREATE_UPDATE
-        #         RoleArn: !GetAtt CloudFormationDeployRole.Arn
-        #         StackName: !Sub ${EnvironmentName}-Network
-        #         TemplatePath: Source::deployments/network.yml
-        #         Capabilities: CAPABILITY_IAM
-        #         ParameterOverrides: !Sub |
-        #           {
-        #             "EnvironmentName": "${EnvironmentName}"
-        #           }
-        #       InputArtifacts:
-        #         - Name: Source
+        #-----------------------------------------------------------------------------#
+        # Infrastructure Resources
+        #-----------------------------------------------------------------------------#
+        - Name: Network_Resources
+          Actions:
+            - Name: Deploy
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                RoleArn: !GetAtt CloudFormationDeployRole.Arn
+                StackName: !Sub ${EnvironmentName}-Network
+                TemplatePath: Source::deployments/network.yml
+                Capabilities: CAPABILITY_IAM
+                ParameterOverrides: !Sub |
+                  {
+                    "EnvironmentName": "${EnvironmentName}"
+                  }
+              InputArtifacts:
+                - Name: Source
 
-        # - Name: Base_Resources
-        #   Actions:
-        #     # Rabbit, Redis, and Postgres
-        #     - Name: Resources
-        #       ActionTypeId:
-        #         Category: Deploy
-        #         Owner: AWS
-        #         Version: 1
-        #         Provider: CloudFormation
-        #       Configuration:
-        #         ActionMode: CREATE_UPDATE
-        #         RoleArn: !GetAtt CloudFormationDeployRole.Arn
-        #         StackName: !Sub ${EnvironmentName}-Resources
-        #         TemplatePath: Source::deployments/resources.yml
-        #         Capabilities: CAPABILITY_IAM
-        #         ParameterOverrides: !Sub |
-        #           {
-        #             "EnvironmentName": "${EnvironmentName}"
-        #           }
-        #       InputArtifacts:
-        #         - Name: Source
+        - Name: Base_Resources
+          Actions:
+            # Rabbit, Redis, and Postgres
+            - Name: Resources
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                RoleArn: !GetAtt CloudFormationDeployRole.Arn
+                StackName: !Sub ${EnvironmentName}-Resources
+                TemplatePath: Source::deployments/resources.yml
+                Capabilities: CAPABILITY_IAM
+                ParameterOverrides: !Sub |
+                  {
+                    "EnvironmentName": "${EnvironmentName}"
+                  }
+              InputArtifacts:
+                - Name: Source
 
-        #     # Application load balancer
-        #     - Name: Load_Balancer
-        #       ActionTypeId:
-        #         Category: Deploy
-        #         Owner: AWS
-        #         Version: 1
-        #         Provider: CloudFormation
-        #       Configuration:
-        #         ActionMode: CREATE_UPDATE
-        #         RoleArn: !GetAtt CloudFormationDeployRole.Arn
-        #         StackName: !Sub ${EnvironmentName}-LoadBalancer
-        #         TemplatePath: Source::deployments/alb.yml
-        #         Capabilities: CAPABILITY_IAM
-        #         ParameterOverrides: !Sub |
-        #           {
-        #             "EnvironmentName": "${EnvironmentName}"
-        #           }
-        #       InputArtifacts:
-        #         - Name: Source
+            # Application load balancer
+            - Name: Load_Balancer
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                RoleArn: !GetAtt CloudFormationDeployRole.Arn
+                StackName: !Sub ${EnvironmentName}-LoadBalancer
+                TemplatePath: Source::deployments/alb.yml
+                Capabilities: CAPABILITY_IAM
+                ParameterOverrides: !Sub |
+                  {
+                    "EnvironmentName": "${EnvironmentName}"
+                  }
+              InputArtifacts:
+                - Name: Source
 
-        #     # ECS/Fargate cluster
-        #     - Name: Cluster
-        #       ActionTypeId:
-        #         Category: Deploy
-        #         Owner: AWS
-        #         Version: 1
-        #         Provider: CloudFormation
-        #       Configuration:
-        #         ActionMode: CREATE_UPDATE
-        #         RoleArn: !GetAtt CloudFormationDeployRole.Arn
-        #         StackName: !Sub ${EnvironmentName}-Cluster
-        #         TemplatePath: Source::deployments/cluster.yml
-        #         Capabilities: CAPABILITY_IAM
-        #         ParameterOverrides: !Sub |
-        #           {
-        #             "EnvironmentName": "${EnvironmentName}",
-        #             "LaunchType": "${LaunchType}"
-        #           }
-        #       InputArtifacts:
-        #         - Name: Source
+            # ECS/Fargate cluster
+            - Name: Cluster
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                RoleArn: !GetAtt CloudFormationDeployRole.Arn
+                StackName: !Sub ${EnvironmentName}-Cluster
+                TemplatePath: Source::deployments/cluster.yml
+                Capabilities: CAPABILITY_IAM
+                ParameterOverrides: !Sub |
+                  {
+                    "EnvironmentName": "${EnvironmentName}",
+                    "LaunchType": "${LaunchType}"
+                  }
+              InputArtifacts:
+                - Name: Source
 
         #-----------------------------------------------------------------------------#
         # Services
@@ -185,55 +185,55 @@ Resources:
         - Name: Services
           Actions:
 
-            # - Name: Server
-            #   ActionTypeId:
-            #     Category: Deploy
-            #     Owner: AWS
-            #     Version: 1
-            #     Provider: CloudFormation
-            #   Configuration:
-            #     ActionMode: CREATE_UPDATE
-            #     RoleArn: !GetAtt CloudFormationDeployRole.Arn
-            #     StackName: !Sub ${EnvironmentName}-Server-Service
-            #     TemplatePath: Source::deployments/services/server.yml
-            #     Capabilities: CAPABILITY_IAM
-            #     ParameterOverrides: !Sub
-            #       - |
-            #         {
-            #           "ServiceName": "server",
-            #           "EnvironmentName": "${EnvironmentName}",
-            #           "LaunchType": "${LaunchType}",
-            #           "ImageUrl": "amazon/amazon-ecs-sample",
-            #           "ContainerMemory": "${memory}"
-            #         }
-            #       - memory: !If [ Fargate, 512, 240 ]
-            #   InputArtifacts:
-            #     - Name: Source
+            - Name: Server
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                RoleArn: !GetAtt CloudFormationDeployRole.Arn
+                StackName: !Sub ${EnvironmentName}-Server-Service
+                TemplatePath: Source::deployments/services/server.yml
+                Capabilities: CAPABILITY_IAM
+                ParameterOverrides: !Sub
+                  - |
+                    {
+                      "ServiceName": "server",
+                      "EnvironmentName": "${EnvironmentName}",
+                      "LaunchType": "${LaunchType}",
+                      "ImageUrl": "amazon/amazon-ecs-sample",
+                      "ContainerMemory": "${memory}"
+                    }
+                  - memory: !If [ Fargate, 512, 240 ]
+              InputArtifacts:
+                - Name: Source
 
-            # - Name: Cache
-            #   ActionTypeId:
-            #     Category: Deploy
-            #     Owner: AWS
-            #     Version: 1
-            #     Provider: CloudFormation
-            #   Configuration:
-            #     ActionMode: CREATE_UPDATE
-            #     RoleArn: !GetAtt CloudFormationDeployRole.Arn
-            #     StackName: !Sub ${EnvironmentName}-Cache-Service
-            #     TemplatePath: Source::deployments/services/cache.yml
-            #     Capabilities: CAPABILITY_IAM
-            #     ParameterOverrides: !Sub
-            #       - |
-            #         {
-            #           "ServiceName": "cache",
-            #           "EnvironmentName": "${EnvironmentName}",
-            #           "LaunchType": "${LaunchType}",
-            #           "ImageUrl": "amazon/amazon-ecs-sample",
-            #           "ContainerMemory": "${memory}"
-            #         }
-            #       - memory: !If [ Fargate, 512, 240 ]
-            #   InputArtifacts:
-            #     - Name: Source
+            - Name: Cache
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                RoleArn: !GetAtt CloudFormationDeployRole.Arn
+                StackName: !Sub ${EnvironmentName}-Cache-Service
+                TemplatePath: Source::deployments/services/cache.yml
+                Capabilities: CAPABILITY_IAM
+                ParameterOverrides: !Sub
+                  - |
+                    {
+                      "ServiceName": "cache",
+                      "EnvironmentName": "${EnvironmentName}",
+                      "LaunchType": "${LaunchType}",
+                      "ImageUrl": "amazon/amazon-ecs-sample",
+                      "ContainerMemory": "${memory}"
+                    }
+                  - memory: !If [ Fargate, 512, 240 ]
+              InputArtifacts:
+                - Name: Source
 
             - Name: Database
               ActionTypeId:
@@ -267,53 +267,53 @@ Resources:
         - Name: Service_Pipelines
           Actions:
 
-            # - Name: Server
-            #   ActionTypeId:
-            #     Category: Deploy
-            #     Owner: AWS
-            #     Version: 1
-            #     Provider: CloudFormation
-            #   Configuration:
-            #     ActionMode: CREATE_UPDATE
-            #     RoleArn: !GetAtt CloudFormationDeployRole.Arn
-            #     StackName: !Sub ${EnvironmentName}-Server-Pipeline
-            #     TemplatePath: Source::deployments/service-pipeline.yml
-            #     Capabilities: CAPABILITY_IAM
-            #     ParameterOverrides: !Sub |
-            #       {
-            #         "ServiceName": "server",
-            #         "EnvironmentName": "${EnvironmentName}",
-            #         "TriggerPattern": "\\[(BuildServer|BuildAll)\\]",
-            #         "GitHubRepo": "${GitHubRepo}",
-            #         "GitHubBranch": "${GitHubBranch}",
-            #         "GitHubUser": "${GitHubUser}"
-            #       }
-            #   InputArtifacts:
-            #     - Name: Source
+            - Name: Server
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                RoleArn: !GetAtt CloudFormationDeployRole.Arn
+                StackName: !Sub ${EnvironmentName}-Server-Pipeline
+                TemplatePath: Source::deployments/service-pipeline.yml
+                Capabilities: CAPABILITY_IAM
+                ParameterOverrides: !Sub |
+                  {
+                    "ServiceName": "server",
+                    "EnvironmentName": "${EnvironmentName}",
+                    "TriggerPattern": "\\[(BuildServer|BuildAll)\\]",
+                    "GitHubRepo": "${GitHubRepo}",
+                    "GitHubBranch": "${GitHubBranch}",
+                    "GitHubUser": "${GitHubUser}"
+                  }
+              InputArtifacts:
+                - Name: Source
 
-            # - Name: Cache
-            #   ActionTypeId:
-            #     Category: Deploy
-            #     Owner: AWS
-            #     Version: 1
-            #     Provider: CloudFormation
-            #   Configuration:
-            #     ActionMode: CREATE_UPDATE
-            #     RoleArn: !GetAtt CloudFormationDeployRole.Arn
-            #     StackName: !Sub ${EnvironmentName}-Cache-Pipeline
-            #     TemplatePath: Source::deployments/service-pipeline.yml
-            #     Capabilities: CAPABILITY_IAM
-            #     ParameterOverrides: !Sub |
-            #       {
-            #         "ServiceName": "cache",
-            #         "EnvironmentName": "${EnvironmentName}",
-            #         "TriggerPattern": "\\[(BuildCache|BuildAll)\\]",
-            #         "GitHubRepo": "${GitHubRepo}",
-            #         "GitHubBranch": "${GitHubBranch}",
-            #         "GitHubUser": "${GitHubUser}"
-            #       }
-            #   InputArtifacts:
-            #     - Name: Source
+            - Name: Cache
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                RoleArn: !GetAtt CloudFormationDeployRole.Arn
+                StackName: !Sub ${EnvironmentName}-Cache-Pipeline
+                TemplatePath: Source::deployments/service-pipeline.yml
+                Capabilities: CAPABILITY_IAM
+                ParameterOverrides: !Sub |
+                  {
+                    "ServiceName": "cache",
+                    "EnvironmentName": "${EnvironmentName}",
+                    "TriggerPattern": "\\[(BuildCache|BuildAll)\\]",
+                    "GitHubRepo": "${GitHubRepo}",
+                    "GitHubBranch": "${GitHubBranch}",
+                    "GitHubUser": "${GitHubUser}"
+                  }
+              InputArtifacts:
+                - Name: Source
 
             - Name: Database
               ActionTypeId:

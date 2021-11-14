@@ -77,6 +77,20 @@ docker attach microservices_backend
 `cd deployments` and create the CI/CD pipeline stack. Once finished, visit the `ExternalUrl` available in the load balancer's Outputs tab in CloudFormation.
 
 ```bash
+aws cloudformation deploy \
+    --stack-name Microservices \
+    --template-file pipeline.yml \
+    --parameter-overrides \
+        EnvironmentName=msprod \
+        LaunchType=Fargate \
+        GitHubRepo=<github_repo_name> \
+        GitHubBranch=<github_branch> \
+        GitHubToken=<github_token> \
+        GitHubUser=<github_user> \
+    --capabilities CAPABILITY_NAMED_IAM
+```
+
+```bash
 aws cloudformation create-stack \
 	--stack-name MicroservicesFargate \
 	--template-body file://pipeline.yml \
