@@ -4,7 +4,8 @@ Parameters:
   EnvironmentName:
     Type: String
     Default: production
-    Description: "A friendly environment name that will be used for namespacing all cluster resources. Example: staging, qa, or production"
+    Description: A friendly environment name that will be used for namespacing all
+                 cluster resources, for example staging, qa, or production
 
 Mappings:
   # Hard values for the subnet masks. These masks define

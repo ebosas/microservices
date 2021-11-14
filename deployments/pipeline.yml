@@ -31,15 +31,15 @@ Resources:
       VersioningConfiguration: 
         Status: Enabled
 
-  #-----------------------------------------------------------------------------#
-  # Source Credentials (for CodeBuild)
-  #-----------------------------------------------------------------------------#
-  SourceCredentials:
-    Type: AWS::CodeBuild::SourceCredential
-    Properties:
-      Token: !Ref GitHubToken
-      ServerType: GITHUB
-      AuthType: PERSONAL_ACCESS_TOKEN
+  # #-----------------------------------------------------------------------------#
+  # # Source Credentials (for CodeBuild)
+  # #-----------------------------------------------------------------------------#
+  # SourceCredentials:
+  #   Type: AWS::CodeBuild::SourceCredential
+  #   Properties:
+  #     Token: !Ref GitHubToken
+  #     ServerType: GITHUB
+  #     AuthType: PERSONAL_ACCESS_TOKEN
 
   #-----------------------------------------------------------------------------#
   # CodePipeline
@@ -204,9 +204,9 @@ Resources:
             #           "EnvironmentName": "${EnvironmentName}",
             #           "LaunchType": "${LaunchType}",
             #           "ImageUrl": "amazon/amazon-ecs-sample",
-            #           "ContainerMemory": ${memory}
+            #           "ContainerMemory": "${memory}"
             #         }
-            #       - memory: !If [ Fargate, 512, 230 ]
+            #       - memory: !If [ Fargate, 512, 240 ]
             #   InputArtifacts:
             #     - Name: Source
 
@@ -229,9 +229,9 @@ Resources:
             #           "EnvironmentName": "${EnvironmentName}",
             #           "LaunchType": "${LaunchType}",
             #           "ImageUrl": "amazon/amazon-ecs-sample",
-            #           "ContainerMemory": ${memory}
+            #           "ContainerMemory": "${memory}"
             #         }
-            #       - memory: !If [ Fargate, 512, 230 ]
+            #       - memory: !If [ Fargate, 512, 240 ]
             #   InputArtifacts:
             #     - Name: Source
 
@@ -254,9 +254,9 @@ Resources:
                       "EnvironmentName": "${EnvironmentName}",
                       "LaunchType": "${LaunchType}",
                       "ImageUrl": "amazon/amazon-ecs-sample",
-                      "ContainerMemory": ${memory}
+                      "ContainerMemory": "${memory}"
                     }
-                  - memory: !If [ Fargate, 512, 230 ]
+                  - memory: !If [ Fargate, 512, 240 ]
               InputArtifacts:
                 - Name: Source
 
