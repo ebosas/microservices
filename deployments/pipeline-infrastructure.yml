@@ -16,9 +16,332 @@ Parameters:
     Default: Fargate
     AllowedValues: [Fargate, EC2]
 
+# Conditions:
+#   Fargate: !Equals [ !Ref LaunchType, 'Fargate' ]
+
 Resources:
 
-  # Role used to give CodePipeline to release a build.
+  #-----------------------------------------------------------------------------#
+  # Artifact Bucket
+  #-----------------------------------------------------------------------------#
+  ArtifactBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub microservices-infrastructure-${AWS::AccountId}
+      VersioningConfiguration: 
+        Status: Enabled
+
+  #-----------------------------------------------------------------------------#
+  # Source Credentials (for CodeBuild)
+  #-----------------------------------------------------------------------------#
+  SourceCredentials:
+    Type: AWS::CodeBuild::SourceCredential
+    Properties:
+      Token: !Ref GitHubToken
+      ServerType: GITHUB
+      AuthType: PERSONAL_ACCESS_TOKEN
+
+  #-----------------------------------------------------------------------------#
+  # CodePipeline
+  #-----------------------------------------------------------------------------#
+  PipelineWebhook: 
+    Type: AWS::CodePipeline::Webhook
+    Properties:
+      AuthenticationConfiguration:
+        SecretToken: !Ref GitHubToken
+      Filters:
+        - JsonPath: "$.ref"
+          MatchEquals: refs/heads/{Branch}
+      Authentication: GITHUB_HMAC
+      TargetPipeline: !Ref Pipeline
+      TargetAction: Source
+      TargetPipelineVersion: !GetAtt Pipeline.Version
+      RegisterWithThirdParty: false # only manual action
+
+  Pipeline:
+    Type: AWS::CodePipeline::Pipeline
+    # DependsOn:
+      # - SSMArtifactBucket
+      # - SSMCodePipelineServiceRoleArn
+    Properties:
+      RoleArn: !GetAtt CodePipelineServiceRole.Arn
+      ArtifactStore:
+        Type: S3
+        Location: !Ref ArtifactBucket
+      Stages:
+
+        #-----------------------------------------------------------------------------#
+        # Source
+        #-----------------------------------------------------------------------------#
+        - Name: Source
+          Actions:
+            - Name: Source
+              Namespace: SourceVariables
+              ActionTypeId:
+                Category: Source
+                Owner: ThirdParty
+                Version: 1
+                Provider: GitHub
+              Configuration:
+                Owner: !Ref GitHubUser
+                Repo: !Ref GitHubRepo
+                Branch: !Ref GitHubBranch
+                OAuthToken: !Ref GitHubToken
+                PollForSourceChanges: false
+              OutputArtifacts:
+                - Name: Source
+              RunOrder: 1
+
+        #-----------------------------------------------------------------------------#
+        # Infrastructure Resources
+        #-----------------------------------------------------------------------------#
+        - Name: Network_Resources
+          Actions:
+            - Name: Deploy
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                RoleArn: !GetAtt CloudFormationDeployRole.Arn
+                StackName: !Sub ${EnvironmentName}-Network
+                TemplatePath: Source::deployments/network.yml
+                Capabilities: CAPABILITY_IAM
+                ParameterOverrides: !Sub |
+                  {
+                    "EnvironmentName": "${EnvironmentName}"
+                  }
+              InputArtifacts:
+                - Name: Source
+
+        - Name: Base_Resources
+          Actions:
+            # Rabbit, Redis, and Postgres
+            - Name: Resources
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                RoleArn: !GetAtt CloudFormationDeployRole.Arn
+                StackName: !Sub ${EnvironmentName}-Resources
+                TemplatePath: Source::deployments/resources.yml
+                Capabilities: CAPABILITY_IAM
+                ParameterOverrides: !Sub |
+                  {
+                    "EnvironmentName": "${EnvironmentName}"
+                  }
+              InputArtifacts:
+                - Name: Source
+
+            # Application load balancer
+            - Name: Load_Balancer
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                RoleArn: !GetAtt CloudFormationDeployRole.Arn
+                StackName: !Sub ${EnvironmentName}-LoadBalancer
+                TemplatePath: Source::deployments/alb.yml
+                Capabilities: CAPABILITY_IAM
+                ParameterOverrides: !Sub |
+                  {
+                    "EnvironmentName": "${EnvironmentName}"
+                  }
+              InputArtifacts:
+                - Name: Source
+
+            # ECS/Fargate cluster
+            - Name: Cluster
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                RoleArn: !GetAtt CloudFormationDeployRole.Arn
+                StackName: !Sub ${EnvironmentName}-Cluster
+                TemplatePath: Source::deployments/cluster.yml
+                Capabilities: CAPABILITY_IAM
+                ParameterOverrides: !Sub |
+                  {
+                    "EnvironmentName": "${EnvironmentName}",
+                    "LaunchType": "${LaunchType}"
+                  }
+              InputArtifacts:
+                - Name: Source
+
+        # #-----------------------------------------------------------------------------#
+        # # Services
+        # #-----------------------------------------------------------------------------#
+        # - Name: Services
+        #   Actions:
+
+        #     - Name: Server
+        #       ActionTypeId:
+        #         Category: Deploy
+        #         Owner: AWS
+        #         Version: 1
+        #         Provider: CloudFormation
+        #       Configuration:
+        #         ActionMode: CREATE_UPDATE
+        #         RoleArn: !GetAtt CloudFormationDeployRole.Arn
+        #         StackName: !Sub ${EnvironmentName}-Server-Service
+        #         TemplatePath: Source::deployments/services/server.yml
+        #         Capabilities: CAPABILITY_IAM
+        #         ParameterOverrides: !Sub
+        #           - |
+        #             {
+        #               "ServiceName": "server",
+        #               "EnvironmentName": "${EnvironmentName}",
+        #               "LaunchType": "${LaunchType}",
+        #               "ImageUrl": "amazon/amazon-ecs-sample",
+        #               "ContainerMemory": ${memory}
+        #             }
+        #           - memory: !If [ Fargate, 512, 230 ]
+        #       InputArtifacts:
+        #         - Name: Source
+
+        #     - Name: Cache
+        #       ActionTypeId:
+        #         Category: Deploy
+        #         Owner: AWS
+        #         Version: 1
+        #         Provider: CloudFormation
+        #       Configuration:
+        #         ActionMode: CREATE_UPDATE
+        #         RoleArn: !GetAtt CloudFormationDeployRole.Arn
+        #         StackName: !Sub ${EnvironmentName}-Cache-Service
+        #         TemplatePath: Source::deployments/services/cache.yml
+        #         Capabilities: CAPABILITY_IAM
+        #         ParameterOverrides: !Sub
+        #           - |
+        #             {
+        #               "ServiceName": "cache",
+        #               "EnvironmentName": "${EnvironmentName}",
+        #               "LaunchType": "${LaunchType}",
+        #               "ImageUrl": "amazon/amazon-ecs-sample",
+        #               "ContainerMemory": ${memory}
+        #             }
+        #           - memory: !If [ Fargate, 512, 230 ]
+        #       InputArtifacts:
+        #         - Name: Source
+
+        #     - Name: Database
+        #       ActionTypeId:
+        #         Category: Deploy
+        #         Owner: AWS
+        #         Version: 1
+        #         Provider: CloudFormation
+        #       Configuration:
+        #         ActionMode: CREATE_UPDATE
+        #         RoleArn: !GetAtt CloudFormationDeployRole.Arn
+        #         StackName: !Sub ${EnvironmentName}-Database-Service
+        #         TemplatePath: Source::deployments/services/database.yml
+        #         Capabilities: CAPABILITY_IAM
+        #         ParameterOverrides: !Sub
+        #           - |
+        #             {
+        #               "ServiceName": "database",
+        #               "EnvironmentName": "${EnvironmentName}",
+        #               "LaunchType": "${LaunchType}",
+        #               "ImageUrl": "amazon/amazon-ecs-sample",
+        #               "ContainerMemory": ${memory}
+        #             }
+        #           - memory: !If [ Fargate, 512, 230 ]
+        #       InputArtifacts:
+        #         - Name: Source
+
+
+        # #-----------------------------------------------------------------------------#
+        # # Service Pipelines
+        # #-----------------------------------------------------------------------------#
+        # - Name: Service_Pipelines
+        #   Actions:
+
+        #     - Name: Server
+        #       ActionTypeId:
+        #         Category: Deploy
+        #         Owner: AWS
+        #         Version: 1
+        #         Provider: CloudFormation
+        #       Configuration:
+        #         ActionMode: CREATE_UPDATE
+        #         RoleArn: !GetAtt CloudFormationDeployRole.Arn
+        #         StackName: !Sub ${EnvironmentName}-Server-Pipeline
+        #         TemplatePath: Source::deployments/service-pipeline.yml
+        #         Capabilities: CAPABILITY_IAM
+        #         ParameterOverrides: !Sub |
+        #           {
+        #             "ServiceName": "server",
+        #             "EnvironmentName": "${EnvironmentName}",
+        #             "TriggerPattern": "\\[(BuildServer|BuildAll)\\]",
+        #             "GitHubRepo": "${GitHubRepo}",
+        #             "GitHubBranch": "${GitHubBranch}",
+        #             "GitHubUser": "${GitHubUser}"
+        #           }
+        #       InputArtifacts:
+        #         - Name: Source
+
+        #     - Name: Cache
+        #       ActionTypeId:
+        #         Category: Deploy
+        #         Owner: AWS
+        #         Version: 1
+        #         Provider: CloudFormation
+        #       Configuration:
+        #         ActionMode: CREATE_UPDATE
+        #         RoleArn: !GetAtt CloudFormationDeployRole.Arn
+        #         StackName: !Sub ${EnvironmentName}-Cache-Pipeline
+        #         TemplatePath: Source::deployments/service-pipeline.yml
+        #         Capabilities: CAPABILITY_IAM
+        #         ParameterOverrides: !Sub |
+        #           {
+        #             "ServiceName": "cache",
+        #             "EnvironmentName": "${EnvironmentName}",
+        #             "TriggerPattern": "\\[(BuildCache|BuildAll)\\]",
+        #             "GitHubRepo": "${GitHubRepo}",
+        #             "GitHubBranch": "${GitHubBranch}",
+        #             "GitHubUser": "${GitHubUser}"
+        #           }
+        #       InputArtifacts:
+        #         - Name: Source
+
+        #     - Name: Database
+        #       ActionTypeId:
+        #         Category: Deploy
+        #         Owner: AWS
+        #         Version: 1
+        #         Provider: CloudFormation
+        #       Configuration:
+        #         ActionMode: CREATE_UPDATE
+        #         RoleArn: !GetAtt CloudFormationDeployRole.Arn
+        #         StackName: !Sub ${EnvironmentName}-Database-Pipeline
+        #         TemplatePath: Source::deployments/service-pipeline.yml
+        #         Capabilities: CAPABILITY_IAM
+        #         ParameterOverrides: !Sub |
+        #           {
+        #             "ServiceName": "database",
+        #             "EnvironmentName": "${EnvironmentName}",
+        #             "TriggerPattern": "\\[(BuildDatabase|BuildAll)\\]",
+        #             "GitHubRepo": "${GitHubRepo}",
+        #             "GitHubBranch": "${GitHubBranch}",
+        #             "GitHubUser": "${GitHubUser}"
+        #           }
+        #       InputArtifacts:
+        #         - Name: Source
+
+  #-----------------------------------------------------------------------------#
+  # Roles for CodePipeline service
+  #-----------------------------------------------------------------------------#
   CodePipelineServiceRole:
     Type: AWS::IAM::Role
     Properties:
@@ -45,6 +368,7 @@ Resources:
                   - s3:GetObject
                   - s3:GetObjectVersion
                   - s3:GetBucketVersioning
+                  - s3:PutObjectAcl
               # Allow codepipeline to build code builds
               - Resource: "*"
                 Effect: Allow
@@ -65,9 +389,35 @@ Resources:
                   - cloudformation:ValidateTemplate
                   - cloudformation:ExecuteChangeSet
                 Resource: "*"
+              # Allow codepipeline to get images from ECR
+              - Effect: Allow
+                Action:
+                  - ecr:GetAuthorizationToken
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:GetRepositoryPolicy
+                  - ecr:DescribeRepositories
+                  - ecr:ListImages
+                  - ecr:DescribeImages
+                  - ecr:BatchGetImage
+                  - ecr:GetLifecyclePolicy
+                  - ecr:GetLifecyclePolicyPreview
+                  - ecr:ListTagsForResource
+                  - ecr:DescribeImageScanFindings
+                Resource: "*"
+              # Allow codepipeline to deploy to ECS
+              - Effect: Allow
+                Action:
+                  - ecs:DescribeServices
+                  - ecs:DescribeTaskDefinition
+                  - ecs:DescribeTasks
+                  - ecs:ListTasks
+                  - ecs:RegisterTaskDefinition
+                  - ecs:UpdateService
+                Resource: "*"
 
-  # CloudFormation deployment role. This role is passed by CodeBuild to
-  # CloudFormation to use when setting up the application resources
+  # This role is passed by CodePipeline to CloudFormation to use
+  # when setting up resources in the pipeline
   CloudFormationDeployRole:
     Type: AWS::IAM::Role
     Properties:
@@ -85,166 +435,40 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  - "iam:*"
-                  - "ec2:*"
-                  - "ecs:*"
-                  - "elasticloadbalancing:*"
-                  - "autoscaling:*"
-                  - "elasticache:*"
-                  - "logs:*"
-                  - "application-autoscaling:*"
-                  - "cloudwatch:*"
-                  - "route53:*"
-                  - "rds:*"
-                  - "mq:*"
-                  # - "secretsmanager:*"
-                  - "ssm:*"
+                  - iam:*
+                  - ec2:*
+                  - ecs:*
+                  - elasticloadbalancing:*
+                  - autoscaling:*
+                  - elasticache:*
+                  - logs:*
+                  - application-autoscaling:*
+                  - cloudwatch:*
+                  - rds:*
+                  - mq:*
+                  # - secretsmanager:*
+                  - ssm:*
+                  - codebuild:*
+                  - ecr:*
+                  - codepipeline:*
+                  - events:*
                 Resource: "*"
 
-  # While the build is in progress we need a place to store artifacts
-  ArtifactBucket:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: !Sub microservices-infrastructure-${AWS::AccountId}
-
-  # A Webhook for the pipeline which is set for manual action only
-  PipelineWebhook: 
-    Type: AWS::CodePipeline::Webhook
-    Properties:
-      AuthenticationConfiguration:
-        SecretToken: !Ref GitHubToken
-      Filters:
-        - JsonPath: "$.ref"
-          MatchEquals: refs/heads/{Branch}
-      Authentication: GITHUB_HMAC
-      TargetPipeline: !Ref Pipeline
-      TargetAction: Source
-      TargetPipelineVersion: !GetAtt Pipeline.Version
-      RegisterWithThirdParty: false # only manual action
-
-  # This pipeline defines the steps to build, deploy, and release the application
-  Pipeline:
-    Type: AWS::CodePipeline::Pipeline
-    Properties:
-      RoleArn: !GetAtt CodePipelineServiceRole.Arn
-      ArtifactStore:
-        Type: S3
-        Location: !Ref ArtifactBucket
-      Stages:
-
-        # First we have to pull the source code from the Github repository
-        - Name: Source
-          Actions:
-            - Name: Source
-              ActionTypeId:
-                Category: Source
-                Owner: ThirdParty
-                Version: 1
-                Provider: GitHub
-              Configuration:
-                Owner: !Ref GitHubUser
-                Repo: !Ref GitHubRepo
-                Branch: !Ref GitHubBranch
-                OAuthToken: !Ref GitHubToken
-                PollForSourceChanges: false
-              OutputArtifacts:
-                - Name: Source
-              RunOrder: 1
-
-        # Now we deploy the network resources: VPC, subnets, etc.
-        - Name: Network
-          Actions:
-            - Name: Deploy
-              ActionTypeId:
-                Category: Deploy
-                Owner: AWS
-                Version: 1
-                Provider: CloudFormation
-              Configuration:
-                ActionMode: CREATE_UPDATE
-                RoleArn: !GetAtt CloudFormationDeployRole.Arn
-                StackName: !Sub ${EnvironmentName}-Network
-                TemplatePath: Source::deployments/network.yml
-                Capabilities: CAPABILITY_IAM
-                ParameterOverrides: !Sub |
-                  {
-                    "EnvironmentName": "${EnvironmentName}"
-                  }
-              InputArtifacts:
-                - Name: Source
-              OutputArtifacts:
-                - Name: Network
-
-        # Deploy the base resources: databases, the load balancer,
-        # and the ECS/Fargate cluster
-        - Name: BaseResources
-          Actions:
-            # Deploy the resources: Rabbit, Redis, and Postgres
-            - Name: DeployResources
-              ActionTypeId:
-                Category: Deploy
-                Owner: AWS
-                Version: 1
-                Provider: CloudFormation
-              Configuration:
-                ActionMode: CREATE_UPDATE
-                RoleArn: !GetAtt CloudFormationDeployRole.Arn
-                StackName: !Sub ${EnvironmentName}-Resources
-                TemplatePath: Source::deployments/resources.yml
-                Capabilities: CAPABILITY_IAM
-                ParameterOverrides: !Sub |
-                  {
-                    "EnvironmentName": "${EnvironmentName}"
-                  }
-              InputArtifacts:
-                - Name: Source
-              OutputArtifacts:
-                - Name: Resources
-
-            # Deploy the application load balancer
-            - Name: DeployLoadBalancer
-              ActionTypeId:
-                Category: Deploy
-                Owner: AWS
-                Version: 1
-                Provider: CloudFormation
-              Configuration:
-                ActionMode: CREATE_UPDATE
-                RoleArn: !GetAtt CloudFormationDeployRole.Arn
-                StackName: !Sub ${EnvironmentName}-LoadBalancer
-                TemplatePath: Source::deployments/alb.yml
-                Capabilities: CAPABILITY_IAM
-                ParameterOverrides: !Sub |
-                  {
-                    "EnvironmentName": "${EnvironmentName}"
-                  }
-              InputArtifacts:
-                - Name: Source
-              OutputArtifacts:
-                - Name: LoadBalancer
-
-            # Deploy the ECS/Fargate cluster
-            - Name: DeployCluster
-              ActionTypeId:
-                Category: Deploy
-                Owner: AWS
-                Version: 1
-                Provider: CloudFormation
-              Configuration:
-                ActionMode: CREATE_UPDATE
-                RoleArn: !GetAtt CloudFormationDeployRole.Arn
-                StackName: !Sub ${EnvironmentName}-Cluster
-                TemplatePath: Source::deployments/cluster.yml
-                Capabilities: CAPABILITY_IAM
-                ParameterOverrides: !Sub |
-                  {
-                    "EnvironmentName": "${EnvironmentName}",
-                    "LaunchType": "${LaunchType}"
-                  }
-              InputArtifacts:
-                - Name: Source
-              OutputArtifacts:
-                - Name: Cluster
+  # #-----------------------------------------------------------------------------#
+  # # SSM Parameter Store
+  # #-----------------------------------------------------------------------------#
+  # SSMArtifactBucket:
+  #   Type: AWS::SSM::Parameter
+  #   Properties:
+  #     Name: /Microservices/ArtifactBucket
+  #     Type: String
+  #     Value: !Ref ArtifactBucket
+  # SSMCodePipelineServiceRoleArn:
+  #   Type: AWS::SSM::Parameter
+  #   Properties:
+  #     Name: /Microservices/CodePipelineServiceRoleArn
+  #     Type: String
+  #     Value: !GetAtt CodePipelineServiceRole.Arn
 
 Outputs:
   PipelineUrl:

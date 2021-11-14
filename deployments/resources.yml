@@ -145,11 +145,9 @@ Resources:
   # SSM Parameter Store
   #-----------------------------------------------------------------------------#
 
-  # Connection strings for the resources created in this stack, will be passed to
-  # services as environmental variables. This will expose passwords in SSM Parameter
-  # Store as well as the ECS tasks definitions interface. Instead, use Secrets
-  # Manager to generate passwords and retrieve directly in applicaton code as shown
-  # in the commented example below.
+  # Connection strings. These will be passed to services as environment variables.
+  # As a result, secrets will be exposed in several places. Instead, use Secrets
+  # Manager to generate passwords and retrieve directly in an app.
   RabbitURLParameter:
     Type: AWS::SSM::Parameter
     Properties:
@@ -180,8 +178,8 @@ Resources:
       Description: A connection string for Redis
       Value: !Sub ${Redis.RedisEndpoint.Address}:${Redis.RedisEndpoint.Port}
 
-  # # An example showing how to use Secrets Manager to generate login credentials.
-  # # Refer in templates like this '{{resolve:secretsmanager:RabbitSecrets::password}}' 
+  # # A Secrets Manager example to generate login credentials. To access in
+  # # templates use '{{resolve:secretsmanager:RabbitSecrets::password}}' 
   # RabbitSecrets:
   #   Type: AWS::SecretsManager::Secret
   #   Properties:

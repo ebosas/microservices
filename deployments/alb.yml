@@ -5,20 +5,24 @@ Parameters:
     Type: String
     Default: production
     Description: The name of the environment to add this load balancer to
+
 Resources:
+
+  #-----------------------------------------------------------------------------#
+  # Container Security Group
+  #-----------------------------------------------------------------------------#
   EcsSecurityGroupIngressFromPublicALB:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       Description: Ingress from the public ALB
       GroupId:
-        Fn::ImportValue: !Sub ${EnvironmentName}:ContainerSecurityGroup
+        Fn::ImportValue: !Sub ${EnvironmentName}:ContainerSecurityGroup # from network
       IpProtocol: -1
-      SourceSecurityGroupId: !Ref 'PublicLoadBalancerSG'
+      SourceSecurityGroupId: !Ref PublicLoadBalancerSG
 
-  # Public load balancer, hosted in public subnets that is accessible
-  # to the public, and is intended to route traffic to one or more public
-  # facing services. This is used for accepting traffic from the public
-  # internet and directing it to public facing microservices
+  #-----------------------------------------------------------------------------#
+  # Public Load Balancer
+  #-----------------------------------------------------------------------------#
   PublicLoadBalancerSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -26,22 +30,21 @@ Resources:
       VpcId:
         Fn::ImportValue: !Sub ${EnvironmentName}:VpcId
       SecurityGroupIngress:
-          # Allow access to ALB from anywhere on the internet
-          - CidrIp: 0.0.0.0/0
-            IpProtocol: -1
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: -1
+
   PublicLoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
       Scheme: internet-facing
       LoadBalancerAttributes:
       - Key: idle_timeout.timeout_seconds
-        Value: '30'
+        Value: 30
       Subnets:
-        # The load balancer is placed into the public subnets, so that traffic
-        # from the internet can reach the load balancer directly via the internet gateway
         - Fn::ImportValue: !Sub ${EnvironmentName}:PublicSubnetOne
         - Fn::ImportValue: !Sub ${EnvironmentName}:PublicSubnetTwo
-      SecurityGroups: [!Ref 'PublicLoadBalancerSG']
+      SecurityGroups: [!Ref PublicLoadBalancerSG]
+
   # A dummy target group is used to setup the ALB to just drop traffic
   # initially, before any real service target groups have been added.
   DummyTargetGroupPublic:
@@ -57,13 +60,14 @@ Resources:
       UnhealthyThresholdCount: 2
       VpcId:
         Fn::ImportValue: !Sub ${EnvironmentName}:VpcId
+
   PublicLoadBalancerListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions:
-        - TargetGroupArn: !Ref 'DummyTargetGroupPublic'
-          Type: 'forward'
-      LoadBalancerArn: !Ref 'PublicLoadBalancer'
+        - TargetGroupArn: !Ref DummyTargetGroupPublic
+          Type: forward
+      LoadBalancerArn: !Ref PublicLoadBalancer
       Port: 80
       Protocol: HTTP
 
