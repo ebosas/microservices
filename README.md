@@ -1,6 +1,6 @@
 # Microservices
 
-A basic example of a microservice architecture which demonstrates communication between a few loosely coupled services.
+A basic example of a microservice architecture.
 
 * Written in Go
 * Uses RabbitMQ to communicate between services
@@ -9,7 +9,7 @@ A basic example of a microservice architecture which demonstrates communication 
 * Stores cache in Redis
 * Uses React for front end development
 * Builds with Docker
-* Deployed as containers on AWS
+* Deployed on AWS with CI/CD
 
 ![](demo.gif)
 
@@ -43,9 +43,9 @@ aws cloudformation deploy \
     --capabilities CAPABILITY_NAMED_IAM
 ```
 
-Trigger the build process by pushing some changes to your repository. Adding `[BuildServer]`, `[BuildCache]`, or `[BuildDatabase]` to the message builds and deploys a particular service. Adding `[BuildAll]` triggers all services.
+To build and deploy all services, push some changes to your repository with `[BuildAll]` added to the message. To trigger specific services, add `[BuildServer]`, `[BuildCache]`, or `[BuildDatabase]`.
 
-Once finished, visit the load balancer's URL. It is available in the LoadBalancer's Outputs tab in CloudFormation.
+Once finished, visit the URL of the load balancer. It is available in the LoadBalancer's Outputs tab in CloudFormation.
 
 ### Github repo setup
 
@@ -58,17 +58,18 @@ On the [Github access token page](https://github.com/settings/tokens), generate 
 
 ### Deleting stacks
 
-Delete in reverse order in CloudFormation. The artifact bucket and ECR repositories will have to be deleted manually.
+Delete in reverse order in CloudFormation. The artifact bucket and ECR repositories will have to be deleted manually. Also, with the EC2 launch type, the auto scaling group needs to be deleted manually. This is due to protection form scale-in when using capacity providers. You can do this from the auto scaling groups section in the AWS EC2 console.
 
-Also, with the EC2 launch type, the auto scaling group needs to be deleted manually. This is due to protection form scale-in when using capacity providers. You can do this from the auto scaling groups section in the AWS EC2 console.
+## Local resources
 
-## Inspect local resources
+When running locally, inspect resources by launching relevant Docker containers.
 
-When running locally, access resources by launching relevant Docker containers.
+<details>
+  <summary>See details</summary>
 
 ### Database
 
-To inspect the database, launch a new container that will connect to our Postgres database. Then enter the password `demopsw` (see the `.env` file).
+To access the database, launch a new container that will connect to our Postgres database. Then enter the password `demopsw` (see the `.env` file).
 
 ```bash
 docker run -it --rm \
@@ -112,10 +113,14 @@ To access the back end service, attach to its docker container from a separate t
 ```bash
 docker attach microservices_backend
 ```
+</details>
 
 ## Local development
 
 For development, run the RabbitMQ and Postgres containers with Docker Compose.
+
+<details>
+  <summary>See details</summary>
 
 ```bash
 docker-compose -f docker-compose-dev.yml up
@@ -134,3 +139,4 @@ For React development, run `npm run serve` in `web/react` and change the script 
 ```html
 <script src="http://127.0.0.1:8000/index.js"></script>
 ```
+</details>
