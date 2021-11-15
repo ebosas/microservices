@@ -50,7 +50,7 @@ Resources:
       AuthenticationConfiguration:
         SecretToken: !Ref GitHubToken
       Filters:
-        - JsonPath: '$.ref'
+        - JsonPath: "$.ref"
           MatchEquals: refs/heads/{Branch}
       Authentication: GITHUB_HMAC
       TargetPipeline: !Ref Pipeline
