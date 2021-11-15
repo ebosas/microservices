@@ -50,22 +50,22 @@ Resources:
       DesiredCapacity: 1
     CreationPolicy:
       ResourceSignal:
-        Timeout: PT15M
+        Timeout: PT5M
     UpdatePolicy:
-      AutoScalingReplacingUpdate:
-        WillReplace: true
-      # AutoScalingRollingUpdate:
-      #   MinSuccessfulInstancesPercent: 100
-      #   WaitOnResourceSignals: true
-      #   PauseTime: PT5M
-      #   SuspendProcesses:
-      #     # Suspend everything except Launch and Terminate.
-      #     - AddToLoadBalancer
-      #     - AlarmNotification
-      #     - AZRebalance
-      #     - HealthCheck
-      #     - ReplaceUnhealthy
-      #     - ScheduledActions
+      # AutoScalingReplacingUpdate:
+      #   WillReplace: true
+      AutoScalingRollingUpdate:
+        MinSuccessfulInstancesPercent: 100
+        WaitOnResourceSignals: true
+        PauseTime: PT5M
+        SuspendProcesses:
+          # Suspend everything except Launch and Terminate.
+          - AddToLoadBalancer
+          - AlarmNotification
+          - AZRebalance
+          - HealthCheck
+          - ReplaceUnhealthy
+          - ScheduledActions
 
   ContainerInstances:
     Type: AWS::AutoScaling::LaunchConfiguration
@@ -214,11 +214,6 @@ Resources:
 
   #-----------------------------------------------------------------------------#
   # Role for ECS
-  #
-  # This is an IAM role which authorizes ECS to manage resources on your
-  # account on your behalf, such as updating your load balancer with the
-  # details of where your containers are, so that traffic can reach your
-  # containers.
   #-----------------------------------------------------------------------------#
   ECSRole:
     Type: AWS::IAM::Role
