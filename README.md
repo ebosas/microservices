@@ -1,6 +1,6 @@
 # Microservices
 
-A basic example of microservice architecture which demonstrates communication between a few loosely coupled services.
+A basic example of a microservice architecture which demonstrates communication between a few loosely coupled services.
 
 * Written in Go
 * Uses RabbitMQ to communicate between services
@@ -15,7 +15,7 @@ A basic example of microservice architecture which demonstrates communication be
 
 ## Local use
 
-To run the example, clone the Github repository and start the services using Docker Compose. Once Docker finishes downloading and building images, the front end is accessible by visiting `localhost:8080`.
+To run the example locally, clone the Github repository and start the services using Docker Compose. Once Docker finishes downloading and building the images, the front end is accessible by visiting `localhost:8080`.
 
 ```bash
 git clone https://github.com/ebosas/microservices
@@ -27,7 +27,7 @@ docker-compose up
 
 ## Deploy to Amazon ECS/AWS Fargate
 
-`cd deployments` and create the CI/CD pipeline stack. Once finished, visit the `ExternalUrl` available in the load balancer's Outputs tab in CloudFormation.
+From the `deployments` directory, create the pipeline stack. It will provision all the resources (network, cluster, etc.) and create a pipeline for each service. At this point, we have yet to build our service images.
 
 ```bash
 aws cloudformation deploy \
@@ -43,26 +43,28 @@ aws cloudformation deploy \
     --capabilities CAPABILITY_NAMED_IAM
 ```
 
+Trigger the build process by pushing some changes to your repository. Adding `[BuildServer]`, `[BuildCache]`, or `[BuildDatabase]` to the message builds and deploys a particular service. Adding `[BuildAll]` triggers all services.
+
+Once finished, visit the load balancer's URL. It is available in the LoadBalancer's Outputs tab in CloudFormation.
+
 ### Github repo setup
 
-Fork this repo to have a copy in your Github account.
+Fork or otherwise copy this repo to your Github account.
 
-Then, on the [Github access token page](https://github.com/settings/tokens), generate a new token with the following access:
+On the [Github access token page](https://github.com/settings/tokens), generate a new token with the following access:
 
 * `repo`
 * `admin:repo_hook`
 
 ### Deleting stacks
 
-When deleting the ECS cluster stack (`cluster-ecs.yml`) in CloudFormation, the auto scaling group needs to be manually deleted. You can do it from the Auto Scaling Groups section in the AWS EC2 console.
+Delete in reverse order in CloudFormation. The artifact bucket and ECR repositories will have to be deleted manually.
 
-With capacity providers, container instances need to be protected from scale-in. This interferes with the automatic deletion process in CloudFormation. 
-
-### References
-
-Deployment is based on these templates: https://github.com/nathanpeck/ecs-cloudformation
+Also, with the EC2 launch type, the auto scaling group needs to be deleted manually. This is due to protection form scale-in when using capacity providers. You can do this from the auto scaling groups section in the AWS EC2 console.
 
 ## Inspect local resources
+
+When running locally, access resources by launching relevant Docker containers.
 
 ### Database
 
@@ -92,7 +94,7 @@ docker run -it --rm \
     redis-cli -h redis
 ```
 
-Get all cached messages or show the number of messages.
+Get all cached messages or show the number of total messages.
 
 ```bash
 lrange messages 0 -1
