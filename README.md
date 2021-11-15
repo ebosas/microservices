@@ -58,7 +58,7 @@ On the [Github access token page](https://github.com/settings/tokens), generate 
 
 ### Deleting stacks
 
-Delete in reverse order in CloudFormation. The artifact bucket and ECR repositories will have to be deleted manually. Also, with the EC2 launch type, the auto scaling group needs to be deleted manually. This is due to protection form scale-in when using capacity providers. You can do this from the auto scaling groups section in the AWS EC2 console.
+Delete stacks in reverse order in CloudFormation. The artifact bucket and ECR repositories need to be deleted manually. So as the auto scaling group (from the EC2 console) when using the EC2 launch type.
 
 ## Local resources
 
