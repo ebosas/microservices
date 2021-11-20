@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+// TestFormatDuration tests duration formatting
 func TestFormatDuration(t *testing.T) {
 	now := time.Now().Unix() * 1000
 	var tests = []struct {

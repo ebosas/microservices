@@ -2,22 +2,26 @@ package main
 
 import (
 	"encoding/json"
+	"strconv"
 	"testing"
 	"time"
 
 	"github.com/ebosas/microservices/internal/models"
 
-	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/alicebob/miniredis/v2"
+	"github.com/go-redis/redis/v8"
 	"github.com/streadway/amqp"
 )
 
-// TestInsertToDB tests a message insertion into a database
-func TestInsertToDB(t *testing.T) {
-	db, mock, err := sqlmock.New()
+// TestUpdateRedis tests a message insertion into cache
+func TestUpdateRedis(t *testing.T) {
+	s, err := miniredis.Run()
 	if err != nil {
-		t.Fatalf("sqlmock connection: %s", err)
+		t.Fatalf("miniredis connection: %s", err)
 	}
-	defer db.Close()
+	defer s.Close()
+
+	c := redis.NewClient(&redis.Options{Addr: s.Addr()})
 
 	now := time.Now().UnixMilli()
 	var tests = []struct {
@@ -30,16 +34,25 @@ func TestInsertToDB(t *testing.T) {
 		{"1", "front", now},
 		{" ", "back", now - 60*60*1000},
 	}
-	for i, test := range tests {
-		mock.ExpectExec("insert into messages").WithArgs(test.message, test.time/1000).WillReturnResult(sqlmock.NewResult(int64(i), 1))
-
+	for _, test := range tests {
 		d := testArguments(t, test.message, test.source, test.time)
-		insertToDB(*d, db)
-
-		if err := mock.ExpectationsWereMet(); err != nil {
-			t.Errorf("unfulfilled expectations: %s", err)
-		}
+		updateRedis(*d, c)
 	}
+
+	if got, err := s.Get("total"); err != nil || got != strconv.Itoa(len(tests)) {
+		t.Error("'total' has the wrong value")
+	}
+
+	list, err := s.List("messages")
+	if err != nil {
+		t.Errorf("list 'messages': %s", err)
+	}
+
+	if len(list) != len(tests) {
+		t.Error("'messages' has wrong length")
+	}
+
+	// TODO: compare each message
 }
 
 // testArguments produces arguments for the function being tested
