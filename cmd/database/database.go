@@ -1,7 +1,7 @@
 package main
 
 import (
-	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -9,7 +9,8 @@ import (
 	"github.com/ebosas/microservices/internal/config"
 	"github.com/ebosas/microservices/internal/models"
 	"github.com/ebosas/microservices/internal/rabbit"
-	"github.com/jackc/pgx/v4"
+
+	_ "github.com/lib/pq"
 	"github.com/streadway/amqp"
 )
 
@@ -19,14 +20,14 @@ func main() {
 	fmt.Println("[Database service]")
 
 	// Postgres connection
-	connPG, err := pgx.Connect(context.Background(), conf.PostgresURL)
+	connPG, err := sql.Open("postgres", conf.PostgresURL+"?sslmode=disable")
 	if err != nil {
 		log.Fatalf("postgres connection: %s", err)
 	}
-	defer connPG.Close(context.Background())
+	defer connPG.Close()
 
 	// The table is not created when deployed on AWS RDS.
-	_, err = connPG.Exec(context.Background(), "create table if not exists messages (id serial primary key, message text not null, created timestamp not null)")
+	_, err = connPG.Exec("create table if not exists messages (id serial primary key, message text not null, created timestamp not null)")
 	if err != nil {
 		log.Fatalf("create table: %s", err)
 	}
@@ -52,25 +53,17 @@ func main() {
 }
 
 // insertToDB inserts a Rabbit message into a Postgres database.
-func insertToDB(d amqp.Delivery, c *pgx.Conn) bool {
+func insertToDB(d amqp.Delivery, c *sql.DB) bool {
 	var message models.Message
 	err := json.Unmarshal(d.Body, &message)
 	if err != nil {
 		log.Fatalf("unmarshal message: %s", err)
 	}
 
-	_, err = c.Exec(context.Background(), "insert into messages (message, created) values ($1, to_timestamp($2))", message.Text, message.Time/1000)
+	_, err = c.Exec("insert into messages (message, created) values ($1, to_timestamp($2))", message.Text, message.Time/1000)
 	if err != nil {
 		log.Fatalf("insert into database: %s", err)
 	}
-
-	// // An alternative query that returns the id of the inserted row.
-	// var id int64
-	// err = c.QueryRow(context.Background(), "insert into messages (message, created) values ($1, to_timestamp($2)) returning id", message.Text, message.Time/1000).Scan(&id)
-	// if err != nil {
-	// 	log.Fatalf("insert into database: %s", err)
-	// }
-	// fmt.Println(id)
 
 	return true
 }
