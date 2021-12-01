@@ -1,5 +1,9 @@
 import React from "react";
 
+declare global {
+    interface Window { __DATA: any; }
+}
+
 let data = window.__DATA || null;
 data = data ? JSON.parse(data) : null;
 window.__DATA = null;
@@ -56,7 +60,7 @@ function Messages() {
                         ))}
                         {!messages.length && (
                             <tr>
-                                <td colSpan="3">No messages</td>
+                                <td colSpan={3}>No messages</td>
                             </tr>
                         )}
                     </tbody>
