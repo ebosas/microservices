@@ -4,6 +4,6 @@ import App from './app';
 
 // ReactDOM.hydrate(
 ReactDOM.render(
-    <App />,
-    document.getElementById('root')
+  <App />,
+  document.getElementById('root')
 );
