@@ -1,18 +1,19 @@
 import React from "react";
 import Form from './form';
 import Alert from './alert';
+import { Message } from "./interfaces";
 
 function Home() {
-    const [alerts, setAlerts] = React.useState([]);
-    const ws = React.useRef(null);
-    const timeout = React.useRef(null);
+    const [alerts, setAlerts] = React.useState<Message[]>([]);
+    const ws = React.useRef<WebSocket | null>(null);
+    const timeout = React.useRef<number | undefined>(undefined);
 
-    const sendMessage = (message) => {
-        if (ws.current.readyState != 1) {
+    const sendMessage = (message: string): boolean => {
+        if (!ws.current || ws.current.readyState != 1) {
             return false;
         }
 
-        let msg = JSON.stringify({
+        let msg: string = JSON.stringify({
             text: message,
             source: "front",
             time: Date.now()
@@ -24,8 +25,8 @@ function Home() {
         return true;
     }
 
-    const addAlert = (msg) => {
-        let item = JSON.parse(msg);
+    const addAlert = (msg: string) => {
+        let item: Message = JSON.parse(msg);
         setAlerts([item, ...alerts.slice(0, 2)]);
     }
 
@@ -40,7 +41,7 @@ function Home() {
         ws.current.onerror = () => console.log('Websocket error')
         
         return () => {
-            ws.current.close();
+            if (ws.current) { ws.current.close() }
         }
     }, []);
 
@@ -48,8 +49,8 @@ function Home() {
     React.useEffect(() => {
         if (!ws.current) return;
 
-        ws.current.onmessage = e => {
-            const msg = e.data;
+        ws.current.onmessage = (e: MessageEvent<string>) => {
+            const msg: string = e.data;
             addAlert(msg);
         }
     }, [alerts]);

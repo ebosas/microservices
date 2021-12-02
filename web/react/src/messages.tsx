@@ -1,19 +1,18 @@
 import React from "react";
+import { Cache, MessageCache } from "./interfaces";
 
 declare global {
-    interface Window { __DATA: any; }
+    interface Window { __DATA: string | null; }
 }
-
-let data = window.__DATA || null;
-data = data ? JSON.parse(data) : null;
+let data: Cache | null = window.__DATA ? JSON.parse(window.__DATA) : null;
 window.__DATA = null;
 
 function Messages() {
     const [error, setError] = React.useState(data ? false : null);
-    const [isLoaded, setIsLoaded] = React.useState(data ? true : false);
-    const [messages, setMessages] = React.useState(data ? data.messages : []);
-    const [counts, setCounts] = React.useState(data ? {count: data.count, total: data.total} : {});
-
+    const [isLoaded, setIsLoaded] = React.useState<boolean>(data ? true : false);
+    const [messages, setMessages] = React.useState<MessageCache[]>(data ? data.messages : []);
+    const [count, setCount] = React.useState<number>(data ? data.count : 0);
+    const [total, setTotal] = React.useState<number>(data ? data.total : 0);
     data = null;
 
     React.useEffect(() => {
@@ -25,7 +24,8 @@ function Messages() {
                 (result) => {
                     setIsLoaded(true);
                     setMessages(result.messages);
-                    setCounts({count: result.count, total: result.total});
+                    setCount(result.count);
+                    setTotal(result.total);
                 },
                 (error) => {
                     setIsLoaded(true);
@@ -41,7 +41,7 @@ function Messages() {
     } else {
         return (
             <div className="container">
-                <h3 className="my-4 ps-2">Recent messages ({counts.count}/{counts.total})</h3>
+                <h3 className="my-4 ps-2">Recent messages ({count}/{total})</h3>
                 <table className="table">
                     <thead>
                         <tr>

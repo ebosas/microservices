@@ -1,6 +1,11 @@
 import React from "react";
+import { Message } from "./interfaces";
 
-function Alert({alert}) {
+interface alertProps {
+    alert: Message;
+}
+
+function Alert({alert}: alertProps) {
     const alertType = alert.source == "back" ? "success" : "primary";
     const alertLabel = alert.source == "back" ? "Received" : "Sent";
 

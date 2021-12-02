@@ -1,13 +1,17 @@
 import React from "react";
 
-function Form({sendMessage}) {
-    const [message, setMessage] = React.useState('');
+interface formProps {
+    sendMessage(s: string): boolean;
+}
 
-    const submitMessage = (e) => {
+function Form({sendMessage}: formProps) {
+    const [message, setMessage] = React.useState<string>('');
+
+    const submitMessage = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
 
         if (!message) {
-            return false;
+            return;
         }
 
         if (sendMessage(message)) {
