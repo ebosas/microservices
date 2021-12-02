@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "build": "node esbuild.js",
+    "build": "esbuild src/index.tsx --bundle --minify --outdir=build",
     "build-server": "esbuild src/index.tsx --bundle --outdir=../../cmd/server/static/build",
     "serve": "esbuild src/index.tsx --outfile=index.js --bundle --sourcemap --serve=8000"
   },
