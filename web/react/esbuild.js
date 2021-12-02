@@ -1,5 +1,5 @@
 require('esbuild').buildSync({
-    entryPoints: ['src/index.jsx'],
+    entryPoints: ['src/index.tsx'],
     bundle: true,
     minify: true,
     sourcemap: false,
